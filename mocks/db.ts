@@ -1,71 +1,120 @@
-import { User, Workspace, Project, Issue } from '../types';
+// 1. ĐỊNH NGHĨA KIỂU DỮ LIỆU (INTERFACES)
 
-class MockDatabase {
-  public users: User[] = [];
-  public workspaces: Workspace[] = [];
-  public projects: Project[] = [];
-  public issues: Issue[] = [];
-
-  constructor() {
-    this.seedDatabase();
-  }
-
-  private seedDatabase() {
-    const adminUser: User = {
-      id: 'usr_123',
-      email: 'phuoc.lead@team.com',
-      name: 'Phước (Team Lead)',
-      avatarUrl: 'https://github.com/shadcn.png',
-    };
-    this.users.push(adminUser);
-
-    const defaultWorkspace: Workspace = {
-      id: 'ws_001',
-      name: 'Frontend OJT Team',
-      slug: 'fe-ojt-team',
-      ownerId: adminUser.id,
-      createdAt: new Date().toISOString(),
-    };
-    this.workspaces.push(defaultWorkspace);
-
-    const cloneProject: Project = {
-      id: 'prj_101',
-      workspaceId: defaultWorkspace.id,
-      name: 'Plane.so Clone',
-      identifier: 'FE',
-      description: 'Dự án clone Plane.so 4 tuần',
-    };
-    this.projects.push(cloneProject);
-
-    this.issues.push({
-      id: 'iss_001',
-      projectId: cloneProject.id,
-      title: 'Thiết lập Base code và MSW',
-      description: 'Khởi tạo Next.js, cài Tailwind, setup Mock DB',
-      state: 'completed',
-      priority: 'urgent',
-      assigneeId: adminUser.id,
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-    });
-
-    this.issues.push({
-      id: 'iss_002',
-      projectId: cloneProject.id,
-      title: 'Dựng Base Layout (Header, Sidebar)',
-      state: 'started',
-      priority: 'high',
-      createdAt: new Date().toISOString(),
-    });
-  }
-
-  public getIssuesByProject(projectId: string): Issue[] {
-    return this.issues.filter(issue => issue.projectId === projectId);
-  }
-
-  public addIssue(issue: Issue): void {
-    if (!issue.projectId) throw new Error("Issue phải thuộc về một Project");
-    this.issues.push(issue);
-  }
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
 }
 
-export const db = new MockDatabase();
+export interface Workspace {
+  id: string;
+  name: string;
+  slug: string; // Tên viết liền không dấu, vd: "fpt-software"
+  owner_id: string;
+}
+
+export interface Project {
+  id: string;
+  workspace_id: string;
+  name: string;
+  identifier: string; // Mã dự án (vd: FE, BE)
+  description: string;
+}
+
+export interface Issue {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string;
+  state: 'Backlog' | 'Todo' | 'In Progress' | 'Done' | 'Cancelled';
+  priority: 'Urgent' | 'High' | 'Medium' | 'Low' | 'None';
+  assignee_id: string | null;
+  module_id: string | null;
+  cycle_id: string | null;
+  created_at: string;
+}
+
+export interface Cycle {
+  id: string;
+  project_id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+}
+
+export interface Module {
+  id: string;
+  project_id: string;
+  name: string;
+  description: string;
+}
+
+// 2. KHỞI TẠO DỮ LIỆU MẪU (MOCK DATA)
+
+// Bảng Users (7 anh em team Plane Clone)
+export const mockUsers: User[] = [
+  { id: 'u1', name: 'Phước (Lead)', email: 'phuoc@example.com', avatar: 'https://i.pravatar.cc/150?u=u1' },
+  { id: 'u2', name: 'Điền', email: 'dien@example.com', avatar: 'https://i.pravatar.cc/150?u=u2' },
+  { id: 'u3', name: 'Danh', email: 'danh@example.com', avatar: 'https://i.pravatar.cc/150?u=u3' },
+  { id: 'u4', name: 'Nhân', email: 'nhan@example.com', avatar: 'https://i.pravatar.cc/150?u=u4' },
+  { id: 'u5', name: 'Nghĩa', email: 'nghia@example.com', avatar: 'https://i.pravatar.cc/150?u=u5' },
+  { id: 'u6', name: 'Trâm', email: 'tram@example.com', avatar: 'https://i.pravatar.cc/150?u=u6' },
+  { id: 'u7', name: 'Đức', email: 'duc@example.com', avatar: 'https://i.pravatar.cc/150?u=u7' },
+];
+
+// Bảng Workspaces
+export const mockWorkspaces: Workspace[] = [
+  { id: 'w1', name: 'OJT Team Frontend', slug: 'ojt-team-fe', owner_id: 'u1' }
+];
+
+// Bảng Projects
+export const mockProjects: Project[] = [
+  { 
+    id: 'p1', 
+    workspace_id: 'w1', 
+    name: 'Plane Clone', 
+    identifier: 'FE', 
+    description: 'Dự án OJT 4 tuần clone Plane.so' 
+  }
+];
+
+// Bảng Modules
+export const mockModules: Module[] = [
+  { id: 'm1', project_id: 'p1', name: 'Auth & User', description: 'Tính năng đăng nhập và quản lý user' },
+  { id: 'm2', project_id: 'p1', name: 'Core Features', description: 'Các tính năng Kanban, Issue' }
+];
+
+// Bảng Cycles
+export const mockCycles: Cycle[] = [
+  { id: 'c1', project_id: 'p1', name: 'Cycle 1: Tuần 1', start_date: '2026-06-29', end_date: '2026-07-05' },
+  { id: 'c2', project_id: 'p1', name: 'Cycle 2: Tuần 2', start_date: '2026-07-06', end_date: '2026-07-12' }
+];
+
+// Bảng Issues
+export const mockIssues: Issue[] = [
+  {
+    id: 'FE-1',
+    project_id: 'p1',
+    title: 'Bọc QueryClientProvider (TanStack Query)',
+    description: 'Setup thư viện gọi API cho toàn app',
+    state: 'Todo',
+    priority: 'High',
+    assignee_id: 'u2', // Giao cho Điền
+    module_id: 'm2',
+    cycle_id: 'c1',
+    created_at: '2026-07-03T00:00:00Z'
+  },
+  {
+    id: 'FE-2',
+    project_id: 'p1',
+    title: 'Dựng UI tĩnh - Form Login & Signup',
+    description: 'Dựng giao diện đăng nhập',
+    state: 'Backlog',
+    priority: 'Medium',
+    assignee_id: 'u4', // Giao cho Nhân
+    module_id: 'm1',
+    cycle_id: 'c1',
+    created_at: '2026-07-03T00:00:00Z'
+  }
+];
