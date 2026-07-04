@@ -1,0 +1,70 @@
+import {
+  FolderPlus,
+  Users,
+  Settings,
+  UserCircle,
+} from "lucide-react";
+
+const guides = [
+  {
+    icon: <FolderPlus className="h-5 w-5" />,
+    title: "Create Project",
+    description: "Most things start with a project.",
+  },
+  {
+    icon: <Users className="h-5 w-5" />,
+    title: "Invite Team",
+    description: "Build together with coworkers.",
+  },
+  {
+    icon: <Settings className="h-5 w-5" />,
+    title: "Setup Workspace",
+    description: "Configure your workspace.",
+  },
+  {
+    icon: <UserCircle className="h-5 w-5" />,
+    title: "Make Plane Yours",
+    description: "Customize your profile.",
+  },
+];
+
+export const QuickGuide = () => {
+  return (
+    <section className="mb-6">
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+        Quick Guide
+      </h2>
+
+      <div className="grid grid-cols-2 gap-3">
+        {guides.map((item) => (
+          <div
+            key={item.title}
+            className="
+              flex items-start gap-3
+              rounded-xl border border-gray-200 bg-white
+              p-4 shadow-sm
+              cursor-pointer
+              hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300
+              transition-all duration-200
+            "
+          >
+            {/* Icon */}
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+              {item.icon}
+            </div>
+
+            {/* Text */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-800">
+                {item.title}
+              </h3>
+              <p className="mt-0.5 text-xs text-gray-400">
+                {item.description}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
