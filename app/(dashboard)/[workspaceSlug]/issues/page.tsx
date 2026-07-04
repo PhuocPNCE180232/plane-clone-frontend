@@ -1,1 +1,5 @@
-export default function IssuesPage() { return <div>Issues Page</div>; }
+import { IssuePage } from "@/components/features/issues/IssuePage";
+
+export default function IssuesPage() {
+  return <IssuePage />;
+}

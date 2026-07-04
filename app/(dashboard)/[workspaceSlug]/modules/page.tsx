@@ -1,1 +1,5 @@
-export default function ModulesPage() { return <div>Modules Page</div>; }
+import { ModulePage } from "@/components/features/modules/ModulePage";
+
+export default function ModulesPage() {
+  return <ModulePage />;
+}

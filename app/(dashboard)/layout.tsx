@@ -1,1 +1,11 @@
-export default function DashboardLayout({ children }: { children: React.ReactNode }) { return <div className="flex h-screen"><main className="flex-1">{children}</main></div>; }
+import { Layout } from "@/components/shared/Layout";
+
+type DashboardLayoutProps = {
+  children: React.ReactNode;
+};
+
+export default function DashboardLayout({
+  children,
+}: DashboardLayoutProps) {
+  return <Layout>{children}</Layout>;
+}
