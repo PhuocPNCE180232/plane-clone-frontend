@@ -1,6 +1,12 @@
+"use client";
+
 import { Plus } from "lucide-react";
+import { useState } from "react";
+import { CreateProjectModal } from "./CreateProjectModal";
 
 export const ProjectHeader = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
     <div className="mb-6 flex items-start justify-between">
       {/* Left: title + description */}
@@ -13,6 +19,7 @@ export const ProjectHeader = () => {
 
       {/* Right: action button */}
       <button
+        onClick={() => setIsModalOpen(true)}
         className="
           flex items-center gap-1.5
           rounded-md bg-[#3f76ff]
@@ -25,6 +32,11 @@ export const ProjectHeader = () => {
         <Plus className="h-3.5 w-3.5" />
         New Project
       </button>
+
+      <CreateProjectModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+      />
     </div>
   );
 };
