@@ -14,12 +14,14 @@ export function WorkspaceSetup({ onNext, onSkip }: { onNext: (data: WorkspaceInp
 
   return (
     <div className="w-full flex flex-col max-w-md mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-1">
-        Let's build your workspace
-      </h1>
-      <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
-        Your workspace is where your teams and projects live.
-      </p>
+      <div className="text-center mb-8">
+        <h1 className="text-[26px] font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-1">
+          Let's build your workspace
+        </h1>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          Your workspace is where your teams and projects live.
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit(onNext)} className="space-y-6">
         <div className="space-y-1.5">

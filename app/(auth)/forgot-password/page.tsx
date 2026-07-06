@@ -31,7 +31,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="w-full flex flex-col">
-      <div className="mb-8">
+      <div className="mb-8 text-center">
         <h1 className="text-[26px] font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
           Forgot password?
         </h1>

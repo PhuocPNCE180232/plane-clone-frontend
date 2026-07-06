@@ -1,6 +1,5 @@
 import React from "react";
 import Link from "next/link";
-import { Plane } from "lucide-react";
 import { AuthHeader } from "@/components/auth/auth-header";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -8,7 +7,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="flex min-h-screen flex-col bg-white dark:bg-[#0a0a0a] relative">
       <header className="absolute top-0 left-0 right-0 p-8 flex justify-between items-center w-full">
         <Link href="/" className="flex items-center gap-2">
-          <Plane className="h-6 w-6 text-zinc-900 dark:text-white" fill="currentColor" />
+          {/* Add custom logo here later */}
           <span className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">Plane</span>
         </Link>
         <AuthHeader />
