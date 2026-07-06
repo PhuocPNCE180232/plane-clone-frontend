@@ -8,15 +8,20 @@ import { ForgotPasswordInput, forgotPasswordSchema } from "@/lib/validations/aut
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { X } from "lucide-react";
 
 export default function ForgotPasswordPage() {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<ForgotPasswordInput>({
     resolver: zodResolver(forgotPasswordSchema),
   });
+
+  const emailValue = watch("email");
 
   const onSubmit = async (data: ForgotPasswordInput) => {
     // Simulate API delay
@@ -25,42 +30,46 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex flex-col space-y-6">
-      <div className="flex flex-col space-y-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-          Reset password
+    <div className="w-full flex flex-col">
+      <div className="mb-8">
+        <h1 className="text-[26px] font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+          Forgot password?
         </h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Enter your email address and we will send you a link to reset your password
-        </p>
+        <h2 className="text-xl font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">
+          We&apos;ll send a reset link to your email.
+        </h2>
       </div>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="name@example.com"
-            {...register("email")}
-            disabled={isSubmitting}
-          />
+        <div className="space-y-1.5">
+          <Label htmlFor="email" className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Email</Label>
+          <div className="relative">
+            <Input
+              id="email"
+              type="email"
+              placeholder="name@example.com"
+              {...register("email")}
+              disabled={isSubmitting}
+              className="pr-10"
+            />
+            {emailValue && (
+              <button
+                type="button"
+                onClick={() => setValue("email", "")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 focus:outline-none"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
           {errors.email && (
-            <p className="text-sm text-red-500">{errors.email.message}</p>
+            <p className="text-xs text-red-500">{errors.email.message}</p>
           )}
         </div>
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        
+        <Button type="submit" className="w-full mt-4 h-11 bg-[#005a9e] hover:bg-[#004a82] text-white" disabled={isSubmitting}>
           {isSubmitting ? "Sending reset link..." : "Send reset link"}
         </Button>
       </form>
-      <div className="text-center text-sm text-zinc-500 dark:text-zinc-400">
-        Remember your password?{" "}
-        <Link
-          href="/sign-in"
-          className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-500 dark:hover:text-blue-400"
-        >
-          Sign in
-        </Link>
-      </div>
     </div>
   );
 }
