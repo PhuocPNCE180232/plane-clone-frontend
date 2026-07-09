@@ -10,7 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, X } from "lucide-react";
 
+import { useRouter } from "next/navigation";
+
 export default function SignInPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const {
     register,
@@ -26,8 +29,12 @@ export default function SignInPage() {
 
   const onSubmit = async (data: SignInInput) => {
     // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 800));
     console.log("Sign In Data:", data);
+    
+    // Set a mock cookie for middleware and redirect to onboarding
+    document.cookie = "plane_session=true; path=/;";
+    router.push("/onboarding");
   };
 
   return (
