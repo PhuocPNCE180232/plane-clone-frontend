@@ -1,6 +1,12 @@
+"use client";
+
+import { useState } from "react";
 import { LayoutGrid, List, ListFilter, Plus } from "lucide-react";
+import { ModuleForm } from "./ModuleForm";
 
 export const ModuleToolbar = () => {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
   return (
     <div className="mb-5 flex items-center justify-between border-b border-gray-200 pb-3">
 
@@ -52,6 +58,8 @@ export const ModuleToolbar = () => {
         </button>
 
         <button
+          type="button"
+          onClick={() => setIsFormOpen(true)}
           className="
             flex items-center gap-1.5
             rounded-md bg-[#3f76ff]
@@ -65,6 +73,30 @@ export const ModuleToolbar = () => {
           Add Module
         </button>
       </div>
+
+      {isFormOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Create module</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Add a new module to group related work.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsFormOpen(false)}
+                className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <ModuleForm onClose={() => setIsFormOpen(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
