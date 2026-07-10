@@ -13,6 +13,7 @@ import {
   RefreshCw,
   MoreHorizontal,
 } from "lucide-react";
+import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 
 // ─── Nav item type ────────────────────────────────────────────────────────────
 
@@ -75,12 +76,12 @@ export const Sidebar = () => {
   return (
     <aside className="flex w-60 shrink-0 flex-col gap-4 border-r border-gray-200 bg-white p-3">
 
-      {/* Workspace name + new item button */}
-      <div>
-        <h2 className="mb-3 px-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
-          Plane Clone
-        </h2>
-        <button className="w-full rounded-md border border-gray-200 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+      {/* Workspace Switcher */}
+      <WorkspaceSwitcher />
+
+      {/* New work item button (Optional here, we can keep it under the switcher) */}
+      <div className="px-2 mb-2">
+        <button className="w-full rounded-md border border-gray-200 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">
           + New work item
         </button>
       </div>

@@ -1,34 +1,50 @@
+"use client";
+
 import {
   FolderPlus,
   Users,
   Settings,
   UserCircle,
 } from "lucide-react";
+import { useState } from "react";
+import { CreateProjectModal } from "../projects/CreateProjectModal";
 
 const guides = [
   {
     icon: <FolderPlus className="h-5 w-5" />,
     title: "Create Project",
     description: "Most things start with a project.",
+    action: "create_project",
   },
   {
     icon: <Users className="h-5 w-5" />,
     title: "Invite Team",
     description: "Build together with coworkers.",
+    action: "invite_team",
   },
   {
     icon: <Settings className="h-5 w-5" />,
     title: "Setup Workspace",
     description: "Configure your workspace.",
+    action: "setup_workspace",
   },
   {
     icon: <UserCircle className="h-5 w-5" />,
     title: "Make Plane Yours",
     description: "Customize your profile.",
+    action: "customize_profile",
   },
 ];
 
 export const QuickGuide = () => {
+  const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
+
+  const handleAction = (action: string) => {
+    if (action === "create_project") {
+      setIsCreateProjectModalOpen(true);
+    }
+  };
+
   return (
     <section className="mb-6">
       <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -39,6 +55,7 @@ export const QuickGuide = () => {
         {guides.map((item) => (
           <div
             key={item.title}
+            onClick={() => handleAction(item.action)}
             className="
               flex items-start gap-3
               rounded-xl border border-gray-200 bg-white
@@ -65,6 +82,11 @@ export const QuickGuide = () => {
           </div>
         ))}
       </div>
+
+      <CreateProjectModal 
+        isOpen={isCreateProjectModalOpen} 
+        onClose={() => setIsCreateProjectModalOpen(false)} 
+      />
     </section>
   );
 };

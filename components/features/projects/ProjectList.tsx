@@ -25,11 +25,6 @@ const projects = [
 export const ProjectList = () => {
   return (
     <section>
-      {/* Section label — matches Cycles "Active Cycles" section style */}
-      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
-        All Projects
-      </h2>
-
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {projects.map((project) => (
           <ProjectCard
