@@ -52,8 +52,26 @@ export interface Module {
 
 // 2. KHỞI TẠO DỮ LIỆU MẪU (MOCK DATA)
 
+const isBrowser = typeof window !== 'undefined';
+
+const loadFromStorage = <T>(key: string, defaultValue: T): T => {
+  if (!isBrowser) return defaultValue;
+  const stored = localStorage.getItem(key);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (e) {}
+  }
+  return defaultValue;
+};
+
+export const saveToStorage = (key: string, value: any) => {
+  if (!isBrowser) return;
+  localStorage.setItem(key, JSON.stringify(value));
+};
+
 // Bảng Users (7 anh em team Plane Clone)
-export const mockUsers: User[] = [
+const defaultUsers: User[] = [
   { id: 'u1', name: 'Phước (Lead)', email: 'phuoc@example.com', avatar: 'https://i.pravatar.cc/150?u=u1' },
   { id: 'u2', name: 'Điền', email: 'dien@example.com', avatar: 'https://i.pravatar.cc/150?u=u2' },
   { id: 'u3', name: 'Danh', email: 'danh@example.com', avatar: 'https://i.pravatar.cc/150?u=u3' },
@@ -63,13 +81,17 @@ export const mockUsers: User[] = [
   { id: 'u7', name: 'Đức', email: 'duc@example.com', avatar: 'https://i.pravatar.cc/150?u=u7' },
 ];
 
+export let mockUsers: User[] = loadFromStorage('mockUsers', defaultUsers);
+
 // Bảng Workspaces
-export const mockWorkspaces: Workspace[] = [
+const defaultWorkspaces: Workspace[] = [
   { id: 'w1', name: 'OJT Team Frontend', slug: 'ojt-team-fe', owner_id: 'u1' }
 ];
 
+export let mockWorkspaces: Workspace[] = loadFromStorage('mockWorkspaces', defaultWorkspaces);
+
 // Bảng Projects
-export const mockProjects: Project[] = [
+const defaultProjects: Project[] = [
   { 
     id: 'p1', 
     workspace_id: 'w1', 
@@ -78,6 +100,8 @@ export const mockProjects: Project[] = [
     description: 'Dự án OJT 4 tuần clone Plane.so' 
   }
 ];
+
+export let mockProjects: Project[] = loadFromStorage('mockProjects', defaultProjects);
 
 // Bảng Modules
 export const mockModules: Module[] = [
