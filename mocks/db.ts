@@ -5,6 +5,7 @@ export interface User {
   name: string;
   email: string;
   avatar: string;
+  password?: string;
 }
 
 export interface Workspace {
@@ -72,16 +73,20 @@ export const saveToStorage = (key: string, value: any) => {
 
 // Bảng Users (7 anh em team Plane Clone)
 const defaultUsers: User[] = [
-  { id: 'u1', name: 'Phước (Lead)', email: 'phuoc@example.com', avatar: 'https://i.pravatar.cc/150?u=u1' },
-  { id: 'u2', name: 'Điền', email: 'dien@example.com', avatar: 'https://i.pravatar.cc/150?u=u2' },
-  { id: 'u3', name: 'Danh', email: 'danh@example.com', avatar: 'https://i.pravatar.cc/150?u=u3' },
-  { id: 'u4', name: 'Nhân', email: 'nhan@example.com', avatar: 'https://i.pravatar.cc/150?u=u4' },
-  { id: 'u5', name: 'Nghĩa', email: 'nghia@example.com', avatar: 'https://i.pravatar.cc/150?u=u5' },
-  { id: 'u6', name: 'Trâm', email: 'tram@example.com', avatar: 'https://i.pravatar.cc/150?u=u6' },
-  { id: 'u7', name: 'Đức', email: 'duc@example.com', avatar: 'https://i.pravatar.cc/150?u=u7' },
+  { id: 'u1', name: 'Phước (Lead)', email: 'phuoc@example.com', avatar: 'https://i.pravatar.cc/150?u=u1', password: 'password123' },
+  { id: 'u2', name: 'Điền', email: 'dien@example.com', avatar: 'https://i.pravatar.cc/150?u=u2', password: 'password123' },
+  { id: 'u3', name: 'Danh', email: 'danh@example.com', avatar: 'https://i.pravatar.cc/150?u=u3', password: 'password123' },
+  { id: 'u4', name: 'Nhân', email: 'nhan@example.com', avatar: 'https://i.pravatar.cc/150?u=u4', password: 'password123' },
+  { id: 'u5', name: 'Nghĩa', email: 'nghia@example.com', avatar: 'https://i.pravatar.cc/150?u=u5', password: 'password123' },
+  { id: 'u6', name: 'Trâm', email: 'tram@example.com', avatar: 'https://i.pravatar.cc/150?u=u6', password: 'password123' },
+  { id: 'u7', name: 'Đức', email: 'duc@example.com', avatar: 'https://i.pravatar.cc/150?u=u7', password: 'password123' },
 ];
 
-export let mockUsers: User[] = loadFromStorage('mockUsers', defaultUsers);
+// Load from storage, but fall back to default if stored data is missing password field (migration)
+const storedUsers = loadFromStorage<User[]>('mockUsers', defaultUsers);
+const needsMigration = storedUsers.some(u => !u.password);
+export let mockUsers: User[] = needsMigration ? defaultUsers : storedUsers;
+if (needsMigration && isBrowser) saveToStorage('mockUsers', defaultUsers);
 
 // Bảng Workspaces
 const defaultWorkspaces: Workspace[] = [
