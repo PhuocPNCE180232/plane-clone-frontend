@@ -9,12 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, X } from "lucide-react";
-
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function SignUpPage() {
   const router = useRouter();
+  const { signup } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const {
     register,
     handleSubmit,
@@ -29,13 +31,13 @@ export default function SignUpPage() {
   const nameValue = watch("name");
 
   const onSubmit = async (data: SignUpInput) => {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    console.log("Sign Up Data:", data);
-
-    // Set a mock cookie for middleware and redirect to onboarding
-    document.cookie = "plane_session=true; path=/;";
-    router.push("/onboarding");
+    setErrorMsg("");
+    try {
+      await signup({ email: data.email, name: data.name, password: data.password });
+      router.push("/onboarding");
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Sign up failed. Please try again.");
+    }
   };
 
   return (
@@ -49,6 +51,11 @@ export default function SignUpPage() {
         </h2>
       </div>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {errorMsg && (
+          <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-md">
+            {errorMsg}
+          </div>
+        )}
         <div className="space-y-1.5">
           <Label htmlFor="name" className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Full Name</Label>
           <div className="relative">

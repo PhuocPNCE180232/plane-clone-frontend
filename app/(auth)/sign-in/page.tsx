@@ -9,12 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, X } from "lucide-react";
-
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function SignInPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const {
     register,
     handleSubmit,
@@ -28,13 +30,13 @@ export default function SignInPage() {
   const emailValue = watch("email");
 
   const onSubmit = async (data: SignInInput) => {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    console.log("Sign In Data:", data);
-    
-    // Set a mock cookie for middleware and redirect to onboarding
-    document.cookie = "plane_session=true; path=/;";
-    router.push("/onboarding");
+    setErrorMsg("");
+    try {
+      await login({ email: data.email, password: data.password });
+      router.push("/onboarding");
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Invalid credentials. Please try again.");
+    }
   };
 
   return (
@@ -48,6 +50,11 @@ export default function SignInPage() {
         </h2>
       </div>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {errorMsg && (
+          <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-md">
+            {errorMsg}
+          </div>
+        )}
         <div className="space-y-1.5">
           <Label htmlFor="email" className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Email</Label>
           <div className="relative">
