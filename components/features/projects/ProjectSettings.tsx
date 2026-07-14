@@ -1,11 +1,90 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { Lock, Globe, Trash2 } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { Lock, Globe, Trash2, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useProjects } from "@/hooks/use-projects";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { updateProject, deleteProject } from "@/lib/services/project.service";
+import { useAppStore } from "@/hooks/use-app-store";
 
 export const ProjectSettings = () => {
   const params = useParams();
-  const slug = (params?.workspaceSlug as string) ?? "workspaceSlug";
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const slug = (params?.workspaceSlug as string) ?? "";
+  const projectId = (params?.projectId as string) ?? "";
+  
+  const { data: projects, isLoading: isProjectsLoading } = useProjects();
+  const { activeWorkspaceId } = useAppStore();
+  
+  const project = projects?.find((p) => p.id === projectId);
+
+  const [name, setName] = useState("");
+  const [identifier, setIdentifier] = useState("");
+  const [description, setDescription] = useState("");
+  const [network, setNetwork] = useState<"public" | "private">("public");
+
+  // Populate state when project data is loaded
+  useEffect(() => {
+    if (project) {
+      setName(project.name);
+      setIdentifier(project.identifier);
+      setDescription(project.description || "");
+      setNetwork(project.network || "public");
+    }
+  }, [project]);
+
+  const { mutate: handleUpdateProject, isPending: isUpdating } = useMutation({
+    mutationFn: (data: any) => updateProject(projectId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects", activeWorkspaceId] });
+      alert("Project settings updated successfully!");
+    },
+    onError: (error) => {
+      console.error("Failed to update project:", error);
+      alert("Failed to update project settings.");
+    }
+  });
+
+  const { mutate: handleDeleteProject, isPending: isDeleting } = useMutation({
+    mutationFn: () => deleteProject(projectId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects", activeWorkspaceId] });
+      router.push(`/${slug}/projects`);
+    },
+    onError: (error) => {
+      console.error("Failed to delete project:", error);
+      alert("Failed to delete project.");
+    }
+  });
+
+  const onUpdate = () => {
+    if (!name.trim() || !identifier.trim()) return;
+    handleUpdateProject({ name, identifier, description, network });
+  };
+
+  const onDelete = () => {
+    if (confirm("Are you sure you want to delete this project? This action cannot be undone.")) {
+      handleDeleteProject();
+    }
+  };
+
+  if (isProjectsLoading) {
+    return (
+      <div className="mx-auto max-w-4xl py-12 px-6 flex justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[#3f76ff]" />
+      </div>
+    );
+  }
+
+  if (!project && !isProjectsLoading) {
+    return (
+      <div className="mx-auto max-w-4xl py-12 px-6 text-center text-gray-500">
+        Project not found.
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl py-8 px-6">
@@ -24,7 +103,8 @@ export const ProjectSettings = () => {
                 </label>
                 <input
                   type="text"
-                  defaultValue="Plane Clone"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#3f76ff] focus:outline-none focus:ring-1 focus:ring-[#3f76ff]"
                 />
               </div>
@@ -35,7 +115,8 @@ export const ProjectSettings = () => {
                 </label>
                 <input
                   type="text"
-                  defaultValue="PC"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value.toUpperCase())}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#3f76ff] focus:outline-none focus:ring-1 focus:ring-[#3f76ff] uppercase"
                 />
               </div>
@@ -46,7 +127,8 @@ export const ProjectSettings = () => {
                 Description
               </label>
               <textarea
-                defaultValue="4-week OJT project cloning the Plane.so frontend interface with Next.js 15."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
                 rows={3}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#3f76ff] focus:outline-none focus:ring-1 focus:ring-[#3f76ff]"
               />
@@ -54,7 +136,12 @@ export const ProjectSettings = () => {
           </div>
           
           <div className="bg-gray-50 px-6 py-4 flex justify-end">
-            <button className="rounded-md bg-[#3f76ff] px-4 py-2 text-sm font-medium text-white hover:bg-[#2d63e8] transition-colors">
+            <button 
+              onClick={onUpdate}
+              disabled={isUpdating || !name.trim() || !identifier.trim()}
+              className="flex items-center rounded-md bg-[#3f76ff] px-4 py-2 text-sm font-medium text-white hover:bg-[#2d63e8] transition-colors disabled:opacity-50"
+            >
+              {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Update settings
             </button>
           </div>
@@ -66,22 +153,36 @@ export const ProjectSettings = () => {
         <h2 className="text-lg font-medium text-gray-900 mb-4">Network</h2>
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden p-6">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#3f76ff] bg-[#3f76ff]/5 p-3 transition-colors">
-              <div className="mt-0.5 rounded-md p-1.5 bg-[#3f76ff]/10 text-[#3f76ff]">
+            <div 
+              onClick={() => setNetwork("public")}
+              className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                network === "public" 
+                  ? "border-[#3f76ff] bg-[#3f76ff]/5" 
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <div className={`mt-0.5 rounded-md p-1.5 ${network === "public" ? "bg-[#3f76ff]/10 text-[#3f76ff]" : "bg-gray-100 text-gray-500"}`}>
                 <Globe className="h-4 w-4" />
               </div>
               <div>
-                <h4 className="text-sm font-medium text-gray-900">Public</h4>
+                <h4 className={`text-sm font-medium ${network === "public" ? "text-gray-900" : "text-gray-700"}`}>Public</h4>
                 <p className="mt-0.5 text-xs text-gray-500">Anyone in the workspace can view and join this project.</p>
               </div>
             </div>
 
-            <div className="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-3 hover:border-gray-300 transition-colors">
-              <div className="mt-0.5 rounded-md p-1.5 bg-gray-100 text-gray-500">
+            <div 
+              onClick={() => setNetwork("private")}
+              className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                network === "private" 
+                  ? "border-[#3f76ff] bg-[#3f76ff]/5" 
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <div className={`mt-0.5 rounded-md p-1.5 ${network === "private" ? "bg-[#3f76ff]/10 text-[#3f76ff]" : "bg-gray-100 text-gray-500"}`}>
                 <Lock className="h-4 w-4" />
               </div>
               <div>
-                <h4 className="text-sm font-medium text-gray-700">Private</h4>
+                <h4 className={`text-sm font-medium ${network === "private" ? "text-gray-900" : "text-gray-700"}`}>Private</h4>
                 <p className="mt-0.5 text-xs text-gray-500">Only workspace members invited to the project can access it.</p>
               </div>
             </div>
@@ -113,8 +214,12 @@ export const ProjectSettings = () => {
                 The project will be permanently deleted, including all its issues, cycles, and settings. This action cannot be undone.
               </p>
             </div>
-            <button className="rounded-md flex items-center gap-2 border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors">
-              <Trash2 className="h-4 w-4" />
+            <button 
+              onClick={onDelete}
+              disabled={isDeleting}
+              className="rounded-md flex items-center gap-2 border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors disabled:opacity-50"
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Delete project
             </button>
           </div>

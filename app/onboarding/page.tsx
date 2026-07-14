@@ -4,22 +4,52 @@ import { useRouter } from "next/navigation";
 import { WorkspaceSetup } from "@/components/onboarding/workspace-setup";
 import { InviteMembers } from "@/components/onboarding/invite-members";
 import { CreateProject } from "@/components/onboarding/create-project";
+import { useAuth } from "@/hooks/use-auth";
+import { createWorkspace } from "@/lib/services/workspace.service";
+import { createProject } from "@/lib/services/project.service";
+
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
+  const [workspaceId, setWorkspaceId] = useState<string>("");
   const router = useRouter();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const handleNext = (data?: any) => {
-    console.log(`Step ${step} Data:`, data);
-    if (step < 3) {
-      setStep(step + 1);
-    } else {
-      router.push("/");
+  const handleNext = async (data?: any) => {
+    try {
+      if (step === 1) {
+        const newWorkspace = await createWorkspace({
+          name: data.name,
+          slug: data.slug,
+          ownerId: user?.id || "",
+        });
+        setWorkspaceId(newWorkspace.id);
+        setStep(2);
+      } else if (step === 2) {
+        setStep(3);
+      } else if (step === 3) {
+        await createProject({
+          name: data.name,
+          identifier: data.identifier,
+          workspaceId: workspaceId,
+          description: "Created from onboarding",
+        });
+        queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+        queryClient.invalidateQueries({ queryKey: ["projects"] });
+        router.push("/");
+      }
+    } catch (error: any) {
+      console.error("Onboarding step failed", error);
+      alert(`Error in step ${step}: ${error?.message || "Unknown error"}`);
+      // Proceed gracefully if api fails during mock
+      if (step < 3) setStep(step + 1);
+      else router.push("/");
     }
   };
 
   const handleSkip = () => {
-    console.log(`Step ${step} Skipped`);
     if (step < 3) {
       setStep(step + 1);
     } else {

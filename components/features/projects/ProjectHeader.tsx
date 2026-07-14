@@ -4,7 +4,12 @@ import { Plus, Search, LayoutGrid, List } from "lucide-react";
 import { useState } from "react";
 import { CreateProjectModal } from "./CreateProjectModal";
 
-export const ProjectHeader = () => {
+interface ProjectHeaderProps {
+  searchQuery?: string;
+  onSearchChange?: (val: string) => void;
+}
+
+export const ProjectHeader = ({ searchQuery = "", onSearchChange }: ProjectHeaderProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [view, setView] = useState("grid");
@@ -77,6 +82,8 @@ export const ProjectHeader = () => {
             <input
               type="text"
               placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange?.(e.target.value)}
               className="w-48 rounded-md border border-gray-300 py-1.5 pl-8 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#3f76ff] focus:outline-none focus:ring-1 focus:ring-[#3f76ff]"
             />
           </div>

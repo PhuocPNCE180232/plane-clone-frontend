@@ -7,6 +7,7 @@ import {
   UserCircle,
 } from "lucide-react";
 import { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { CreateProjectModal } from "../projects/CreateProjectModal";
 
 const guides = [
@@ -38,10 +39,15 @@ const guides = [
 
 export const QuickGuide = () => {
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
-
+  const router = useRouter();
+  const params = useParams();
+  
   const handleAction = (action: string) => {
     if (action === "create_project") {
       setIsCreateProjectModalOpen(true);
+    } else if (action === "setup_workspace") {
+      const slug = params?.workspaceSlug;
+      if (slug) router.push(`/${slug}/settings`);
     }
   };
 
