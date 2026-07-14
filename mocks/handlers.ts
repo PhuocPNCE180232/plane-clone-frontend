@@ -11,11 +11,41 @@
 import { http, HttpResponse } from "msw";
 import { mockUsers, mockWorkspaces, mockProjects, User, Workspace, Project, saveToStorage } from "./db";
 
-export const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+export const BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
+
+// Helper to wrap all JSON responses with CORS headers
+function jsonResponse(body: any, init?: ResponseInit) {
+  const headers = new Headers(init?.headers);
+  headers.set("Access-Control-Allow-Origin", "http://localhost:3000");
+  headers.set("Access-Control-Allow-Credentials", "true");
+  return HttpResponse.json(body, { ...init, headers });
+}
 
 export { http, HttpResponse };
 
+const getSessionId = (request: Request) => {
+  const cookieHeader = request.headers.get("Cookie");
+  let sessionId = cookieHeader?.split("plane_session=")?.[1]?.split(";")?.[0];
+  if (!sessionId && typeof document !== "undefined") {
+    sessionId = document.cookie?.split("plane_session=")?.[1]?.split(";")?.[0];
+  }
+  return sessionId;
+};
+
 export const handlers: ReturnType<typeof http.all>[] = [
+  // --- MOCK CORS PREFLIGHT ---
+  http.options(`${BASE}/*`, () => {
+    return new HttpResponse(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "http://localhost:3000",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Credentials": "true",
+      },
+    });
+  }),
+
   // --- AUTH ---
   http.post(`${BASE}/auth/login`, async ({ request }) => {
     const body = (await request.json()) as any;
@@ -23,15 +53,15 @@ export const handlers: ReturnType<typeof http.all>[] = [
 
     const user = mockUsers.find((u) => u.email === email);
     if (!user) {
-      return HttpResponse.json({ error: "Invalid credentials" }, { status: 401 });
+      return jsonResponse({ error: "Invalid credentials" }, { status: 401 });
     }
 
     // Verify password if the user has one set
     if (user.password && user.password !== password) {
-      return HttpResponse.json({ error: "Invalid credentials" }, { status: 401 });
+      return jsonResponse({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    return HttpResponse.json({ user, token: "mock_token_" + user.id }, {
+    return jsonResponse({ user, token: "mock_token_" + user.id }, {
       headers: {
         "Set-Cookie": `plane_session=${user.id}; Path=/; HttpOnly`,
       },
@@ -44,11 +74,11 @@ export const handlers: ReturnType<typeof http.all>[] = [
 
     const existing = mockUsers.find((u) => u.email === email);
     if (existing) {
-      return HttpResponse.json({ error: "Email already in use" }, { status: 400 });
+      return jsonResponse({ error: "Email already in use" }, { status: 400 });
     }
 
     const newUser: User = {
-      id: `u${mockUsers.length + 1}`,
+      id: `u${Date.now()}`,
       name: name || email.split("@")[0],
       email,
       avatar: "",
@@ -57,7 +87,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
     mockUsers.push(newUser);
     saveToStorage("mockUsers", mockUsers);
 
-    return HttpResponse.json({ user: newUser, token: "mock_token_" + newUser.id }, {
+    return jsonResponse({ user: newUser, token: "mock_token_" + newUser.id }, {
       headers: {
         "Set-Cookie": `plane_session=${newUser.id}; Path=/; HttpOnly`,
       },
@@ -65,23 +95,22 @@ export const handlers: ReturnType<typeof http.all>[] = [
   }),
 
   http.get(`${BASE}/users/me`, async ({ request }) => {
-    const cookieHeader = request.headers.get("Cookie");
-    const sessionId = cookieHeader?.split("plane_session=")?.[1]?.split(";")?.[0];
+    const sessionId = getSessionId(request);
 
     if (!sessionId) {
-      return HttpResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
     }
 
     const user = mockUsers.find((u) => u.id === sessionId);
     if (!user) {
-      return HttpResponse.json({ error: "User not found" }, { status: 404 });
+      return jsonResponse({ error: "User not found" }, { status: 404 });
     }
 
-    return HttpResponse.json({ user });
+    return jsonResponse({ user });
   }),
 
   http.post(`${BASE}/auth/logout`, async () => {
-    return HttpResponse.json({ success: true }, {
+    return jsonResponse({ success: true }, {
       headers: {
         "Set-Cookie": `plane_session=; Path=/; HttpOnly; Max-Age=0`,
       },
@@ -89,44 +118,154 @@ export const handlers: ReturnType<typeof http.all>[] = [
   }),
 
   // --- ONBOARDING (WORKSPACES & PROJECTS) ---
+  http.get(`${BASE}/workspaces`, async ({ request }) => {
+    const sessionId = getSessionId(request);
+
+    if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+    // For development, return all workspaces since we haven't implemented members yet.
+    return jsonResponse(mockWorkspaces);
+  }),
+
   http.post(`${BASE}/workspaces`, async ({ request }) => {
-    const body = (await request.json()) as any;
+    try {
+      const body = (await request.json()) as any;
+      const sessionId = getSessionId(request);
 
-    const cookieHeader = request.headers.get("Cookie");
-    const sessionId = cookieHeader?.split("plane_session=")?.[1]?.split(";")?.[0];
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
-    if (!sessionId) return HttpResponse.json({ error: "Unauthorized" }, { status: 401 });
+      const existing = mockWorkspaces.find(w => w.slug === body.slug);
+      if (existing) {
+        return jsonResponse({ error: "Workspace URL is already taken" }, { status: 400 });
+      }
 
-    const newWorkspace: Workspace = {
-      id: `w${mockWorkspaces.length + 1}`,
-      name: body.name,
-      slug: body.slug,
-      owner_id: sessionId,
-    };
-    mockWorkspaces.push(newWorkspace);
-    saveToStorage("mockWorkspaces", mockWorkspaces);
+      const newWorkspace: Workspace = {
+        id: `w${Date.now()}`,
+        name: body.name,
+        slug: body.slug,
+        owner_id: sessionId,
+      };
+      mockWorkspaces.push(newWorkspace);
+      saveToStorage("mockWorkspaces", mockWorkspaces);
 
-    return HttpResponse.json(newWorkspace, { status: 201 });
+      return jsonResponse(newWorkspace, { status: 201 });
+    } catch (e: any) {
+      console.error("MSW Error in POST /workspaces:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
+  }),
+
+  http.patch(`${BASE}/workspaces/:id`, async ({ request, params }) => {
+    try {
+      const { id } = params;
+      const sessionId = getSessionId(request);
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const body = (await request.json()) as any;
+      const index = mockWorkspaces.findIndex(w => w.id === id);
+      if (index === -1) return jsonResponse({ error: "Workspace not found" }, { status: 404 });
+
+      mockWorkspaces[index] = { ...mockWorkspaces[index], ...body };
+      saveToStorage("mockWorkspaces", mockWorkspaces);
+
+      return jsonResponse(mockWorkspaces[index]);
+    } catch (e: any) {
+      console.error("MSW Error in PATCH /workspaces:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
+  }),
+
+  http.delete(`${BASE}/workspaces/:id`, async ({ request, params }) => {
+    try {
+      const { id } = params;
+      const sessionId = getSessionId(request);
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const index = mockWorkspaces.findIndex(w => w.id === id);
+      if (index === -1) return jsonResponse({ error: "Workspace not found" }, { status: 404 });
+
+      mockWorkspaces.splice(index, 1);
+      saveToStorage("mockWorkspaces", mockWorkspaces);
+
+      return jsonResponse({ success: true });
+    } catch (e: any) {
+      console.error("MSW Error in DELETE /workspaces:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
+  }),
+
+  http.get(`${BASE}/projects`, async ({ request }) => {
+    const sessionId = getSessionId(request);
+
+    if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+    // The user can fetch all projects in the workspace. Since we don't have workspace validation yet, we just return all mock projects.
+    // In a real app, it would filter by workspaceId. Let's return all projects.
+    return jsonResponse(mockProjects);
   }),
 
   http.post(`${BASE}/projects`, async ({ request }) => {
-    const body = (await request.json()) as any;
+    try {
+      const body = (await request.json()) as any;
+      const sessionId = getSessionId(request);
 
-    const cookieHeader = request.headers.get("Cookie");
-    const sessionId = cookieHeader?.split("plane_session=")?.[1]?.split(";")?.[0];
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
-    if (!sessionId) return HttpResponse.json({ error: "Unauthorized" }, { status: 401 });
+      const newProject: Project = {
+        id: `p${Date.now()}`,
+        workspaceId: body.workspaceId || mockWorkspaces[0]?.id || "w1",
+        name: body.name,
+        identifier: body.identifier,
+        description: body.description || "",
+        createdAt: new Date().toISOString(),
+        network: body.network || "public",
+      };
+      mockProjects.push(newProject);
+      saveToStorage("mockProjects", mockProjects);
 
-    const newProject: Project = {
-      id: `p${mockProjects.length + 1}`,
-      workspace_id: body.workspaceId || mockWorkspaces[0]?.id || "w1",
-      name: body.name,
-      identifier: body.identifier,
-      description: body.description || "",
-    };
-    mockProjects.push(newProject);
-    saveToStorage("mockProjects", mockProjects);
+      return jsonResponse(newProject, { status: 201 });
+    } catch (e: any) {
+      console.error("MSW Error in POST /projects:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
+  }),
 
-    return HttpResponse.json(newProject, { status: 201 });
+  http.patch(`${BASE}/projects/:id`, async ({ request, params }) => {
+    try {
+      const { id } = params;
+      const sessionId = getSessionId(request);
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const body = (await request.json()) as any;
+      const index = mockProjects.findIndex(p => p.id === id);
+      if (index === -1) return jsonResponse({ error: "Project not found" }, { status: 404 });
+
+      mockProjects[index] = { ...mockProjects[index], ...body };
+      saveToStorage("mockProjects", mockProjects);
+
+      return jsonResponse(mockProjects[index]);
+    } catch (e: any) {
+      console.error("MSW Error in PATCH /projects:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
+  }),
+
+  http.delete(`${BASE}/projects/:id`, async ({ request, params }) => {
+    try {
+      const { id } = params;
+      const sessionId = getSessionId(request);
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const index = mockProjects.findIndex(p => p.id === id);
+      if (index === -1) return jsonResponse({ error: "Project not found" }, { status: 404 });
+
+      mockProjects.splice(index, 1);
+      saveToStorage("mockProjects", mockProjects);
+
+      return jsonResponse({ success: true });
+    } catch (e: any) {
+      console.error("MSW Error in DELETE /projects:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
   }),
 ];

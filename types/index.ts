@@ -19,6 +19,8 @@ export interface Project {
   name: string;
   identifier: string;
   description?: string;
+  createdAt: string;
+  network: "public" | "private";
 }
 
 export interface Issue {

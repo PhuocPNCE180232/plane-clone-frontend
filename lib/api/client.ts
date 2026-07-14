@@ -30,10 +30,7 @@
 import axios, { InternalAxiosRequestConfig } from "axios";
 import { normaliseError } from "./error";
 
-// ─── Configuration ─────────────────────────────────────────────────────────
-
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
 
 // ─── Axios instance ────────────────────────────────────────────────────────
 

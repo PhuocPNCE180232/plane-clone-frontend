@@ -17,10 +17,12 @@ export interface Workspace {
 
 export interface Project {
   id: string;
-  workspace_id: string;
+  workspaceId: string;
   name: string;
   identifier: string; // Mã dự án (vd: FE, BE)
   description: string;
+  createdAt?: string;
+  network?: "public" | "private";
 }
 
 export interface Issue {
@@ -93,20 +95,86 @@ const defaultWorkspaces: Workspace[] = [
   { id: 'w1', name: 'OJT Team Frontend', slug: 'ojt-team-fe', owner_id: 'u1' }
 ];
 
-export let mockWorkspaces: Workspace[] = loadFromStorage('mockWorkspaces', defaultWorkspaces);
+let storedWorkspaces = loadFromStorage<Workspace[]>('mockWorkspaces', defaultWorkspaces);
+
+if (isBrowser) {
+  let hasChanges = false;
+  const seenSlugs = new Set();
+  storedWorkspaces = storedWorkspaces.map(w => {
+    let slug = w.slug;
+    let counter = 1;
+    while (seenSlugs.has(slug)) {
+      slug = `${w.slug}-${counter}`;
+      counter++;
+      hasChanges = true;
+    }
+    seenSlugs.add(slug);
+    return { ...w, slug };
+  });
+  if (hasChanges) saveToStorage('mockWorkspaces', storedWorkspaces);
+}
+
+export let mockWorkspaces: Workspace[] = storedWorkspaces;
 
 // Bảng Projects
 const defaultProjects: Project[] = [
   { 
     id: 'p1', 
-    workspace_id: 'w1', 
+    workspaceId: 'w1', 
     name: 'Plane Clone', 
     identifier: 'FE', 
-    description: 'Dự án OJT 4 tuần clone Plane.so' 
+    description: 'Dự án OJT 4 tuần clone Plane.so',
+    createdAt: new Date(Date.now() - 3600000 * 24 * 2).toISOString(), // 2 days ago
+    network: 'public',
+  },
+  { 
+    id: 'p2', 
+    workspaceId: 'w1', 
+    name: 'Backend API', 
+    identifier: 'BE', 
+    description: 'Xây dựng API cho dự án',
+    createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
+    network: 'private',
+  },
+  { 
+    id: 'p3', 
+    workspaceId: 'w1', 
+    name: 'Mobile App', 
+    identifier: 'APP', 
+    description: 'Phát triển ứng dụng di động',
+    createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
+    network: 'public',
   }
 ];
 
-export let mockProjects: Project[] = loadFromStorage('mockProjects', defaultProjects);
+let storedProjects = loadFromStorage<Project[]>('mockProjects', defaultProjects);
+const needsProjectMigration = storedProjects.some(p => !p.createdAt || !p.network);
+if (needsProjectMigration) {
+  storedProjects = storedProjects.map(p => ({
+    ...p,
+    createdAt: p.createdAt || new Date(Date.now() - 3600000 * 24).toISOString(),
+    network: p.network || "public"
+  }));
+  if (isBrowser) saveToStorage('mockProjects', storedProjects);
+}
+
+export let mockProjects: Project[] = storedProjects;
+
+// Fix duplicate IDs caused by previous generation bug
+if (isBrowser) {
+  const uniqueProjects = new Map();
+  mockProjects.forEach(p => uniqueProjects.set(p.id, p));
+  const deduplicated = Array.from(uniqueProjects.values());
+  if (deduplicated.length !== mockProjects.length) {
+    mockProjects = deduplicated;
+    saveToStorage('mockProjects', mockProjects);
+  }
+}
+
+if (mockProjects.length === 1 && mockProjects[0].id === 'p1' && isBrowser) {
+  mockProjects = defaultProjects;
+  saveToStorage('mockProjects', defaultProjects);
+}
 
 // Bảng Modules
 export const mockModules: Module[] = [

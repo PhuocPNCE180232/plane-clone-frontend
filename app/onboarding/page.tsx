@@ -8,11 +8,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { createWorkspace } from "@/lib/services/workspace.service";
 import { createProject } from "@/lib/services/project.service";
 
+import { useQueryClient } from "@tanstack/react-query";
+
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [workspaceId, setWorkspaceId] = useState<string>("");
   const router = useRouter();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const handleNext = async (data?: any) => {
     try {
@@ -33,10 +36,13 @@ export default function OnboardingPage() {
           workspaceId: workspaceId,
           description: "Created from onboarding",
         });
+        queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+        queryClient.invalidateQueries({ queryKey: ["projects"] });
         router.push("/");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Onboarding step failed", error);
+      alert(`Error in step ${step}: ${error?.message || "Unknown error"}`);
       // Proceed gracefully if api fails during mock
       if (step < 3) setStep(step + 1);
       else router.push("/");

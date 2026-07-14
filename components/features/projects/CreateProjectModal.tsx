@@ -1,5 +1,8 @@
-import { X, Lock, Globe } from "lucide-react";
+import { X, Lock, Globe, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createProject } from "@/lib/services/project.service";
+import { useAppStore } from "@/hooks/use-app-store";
 
 type CreateProjectModalProps = {
   isOpen: boolean;
@@ -11,6 +14,40 @@ export const CreateProjectModal = ({ isOpen, onClose }: CreateProjectModalProps)
   const [identifier, setIdentifier] = useState("");
   const [description, setDescription] = useState("");
   const [network, setNetwork] = useState<"public" | "private">("public");
+
+  const queryClient = useQueryClient();
+  const { activeWorkspaceId, setProject } = useAppStore();
+
+  const { mutate: handleCreateProject, isPending } = useMutation({
+    mutationFn: createProject,
+    onSuccess: (newProject) => {
+      queryClient.invalidateQueries({ queryKey: ["projects", activeWorkspaceId] });
+      setProject(newProject.id);
+      
+      // Reset form
+      setName("");
+      setIdentifier("");
+      setDescription("");
+      setNetwork("public");
+      
+      onClose();
+    },
+    onError: (error) => {
+      console.error("Failed to create project:", error);
+    }
+  });
+
+  const onSubmit = () => {
+    if (!name.trim() || !identifier.trim() || !activeWorkspaceId) return;
+
+    handleCreateProject({
+      name,
+      identifier,
+      description,
+      workspaceId: activeWorkspaceId,
+      network,
+    });
+  };
 
   if (!isOpen) return null;
 
@@ -121,15 +158,24 @@ export const CreateProjectModal = ({ isOpen, onClose }: CreateProjectModalProps)
         <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/50 px-6 py-4 rounded-b-xl shrink-0">
           <button
             onClick={onClose}
-            className="rounded-md px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+            disabled={isPending}
+            className="rounded-md px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
-            onClick={onClose}
-            className="rounded-md bg-[#3f76ff] px-4 py-2 text-sm font-medium text-white hover:bg-[#2d63e8] transition-colors"
+            onClick={onSubmit}
+            disabled={isPending || !name.trim() || !identifier.trim() || !activeWorkspaceId}
+            className="flex items-center justify-center min-w-[130px] rounded-md bg-[#3f76ff] px-4 py-2 text-sm font-medium text-white hover:bg-[#2d63e8] transition-colors disabled:opacity-50"
           >
-            Create project
+            {isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              "Create project"
+            )}
           </button>
         </div>
       </div>

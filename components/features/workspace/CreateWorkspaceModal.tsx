@@ -1,5 +1,10 @@
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createWorkspace } from "@/lib/services/workspace.service";
+import { useAppStore } from "@/hooks/use-app-store";
+import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "next/navigation";
 
 type CreateWorkspaceModalProps = {
   isOpen: boolean;
@@ -9,8 +14,45 @@ type CreateWorkspaceModalProps = {
 export const CreateWorkspaceModal = ({ isOpen, onClose }: CreateWorkspaceModalProps) => {
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
+  const queryClient = useQueryClient();
+  const setWorkspace = useAppStore((state) => state.setWorkspace);
+  const { user } = useAuth();
+  const router = useRouter();
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const { mutate: handleCreateWorkspace, isPending } = useMutation({
+    mutationFn: createWorkspace,
+    onSuccess: (newWorkspace) => {
+      // Invalidate the workspaces query to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+      // Set the newly created workspace as active
+      setWorkspace(newWorkspace.id);
+      // Close modal and reset state
+      setName("");
+      setUrl("");
+      setErrorMsg("");
+      onClose();
+      // Navigate to new workspace
+      router.push(`/${newWorkspace.slug}/projects`);
+    },
+    onError: (error: any) => {
+      console.error("Failed to create workspace:", error);
+      setErrorMsg(error?.message || "Failed to create workspace. Please try another URL.");
+    },
+  });
 
   if (!isOpen) return null;
+
+  const onSubmit = () => {
+    if (!name.trim() || !url.trim() || !user?.id) return;
+    setErrorMsg("");
+    
+    handleCreateWorkspace({
+      name,
+      slug: url,
+      owner_id: user.id,
+    });
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -58,21 +100,35 @@ export const CreateWorkspaceModal = ({ isOpen, onClose }: CreateWorkspaceModalPr
               />
             </div>
           </div>
+          {errorMsg && (
+            <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-600">
+              {errorMsg}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/50 px-6 py-4 rounded-b-xl">
           <button
             onClick={onClose}
-            className="rounded-md px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+            disabled={isPending}
+            className="rounded-md px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
-            onClick={onClose}
-            className="rounded-md bg-[#3f76ff] px-4 py-2 text-sm font-medium text-white hover:bg-[#2d63e8] transition-colors"
+            onClick={onSubmit}
+            disabled={isPending || !name.trim() || !url.trim()}
+            className="flex items-center justify-center min-w-[140px] rounded-md bg-[#3f76ff] px-4 py-2 text-sm font-medium text-white hover:bg-[#2d63e8] transition-colors disabled:opacity-50"
           >
-            Create workspace
+            {isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              "Create workspace"
+            )}
           </button>
         </div>
       </div>

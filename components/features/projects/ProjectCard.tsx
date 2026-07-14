@@ -11,12 +11,15 @@ import {
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { formatDistanceToNow } from "date-fns";
 
 type ProjectCardProps = {
+  id: string;
   title: string;
   description: string;
   members: number;
   issues: number;
+  createdAt?: string;
 };
 
 // Static colour slots cycling through Plane-style accent colours
@@ -44,10 +47,12 @@ function initials(title: string): string {
 }
 
 export const ProjectCard = ({
+  id,
   title,
   description,
   members,
   issues,
+  createdAt,
 }: ProjectCardProps) => {
   const accentClass = colourFor(title);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -56,8 +61,7 @@ export const ProjectCard = ({
   const params = useParams();
   const slug = (params?.workspaceSlug as string) ?? "workspaceSlug";
   
-  // Dummy projectId based on initials for static linking
-  const projectId = initials(title).toLowerCase();
+  const projectId = id;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -145,7 +149,7 @@ export const ProjectCard = ({
           </span>
           <span className="ml-auto flex items-center gap-1 text-gray-400">
             <Clock className="h-3.5 w-3.5" />
-            2h ago
+            {createdAt ? formatDistanceToNow(new Date(createdAt), { addSuffix: true }) : "Unknown"}
           </span>
         </div>
       </Link>
