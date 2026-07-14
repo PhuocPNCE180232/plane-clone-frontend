@@ -44,6 +44,7 @@ export interface Cycle {
   name: string;
   start_date: string;
   end_date: string;
+  progress?: number; // % complete for cycle progress display
 }
 
 export interface Module {
@@ -51,6 +52,7 @@ export interface Module {
   project_id: string;
   name: string;
   description: string;
+  progress?: number; // % complete for module progress display
 }
 
 // 2. KHỞI TẠO DỮ LIỆU MẪU (MOCK DATA)
@@ -178,14 +180,15 @@ if (mockProjects.length === 1 && mockProjects[0].id === 'p1' && isBrowser) {
 
 // Bảng Modules
 export const mockModules: Module[] = [
-  { id: 'm1', project_id: 'p1', name: 'Auth & User', description: 'Tính năng đăng nhập và quản lý user' },
-  { id: 'm2', project_id: 'p1', name: 'Core Features', description: 'Các tính năng Kanban, Issue' }
+  { id: 'm1', project_id: 'p1', name: 'Auth & User', description: 'Tính năng đăng nhập và quản lý user', progress: 55 },
+  { id: 'm2', project_id: 'p1', name: 'Core Features', description: 'Các tính năng Kanban, Issue', progress: 35 },
+  { id: 'm3', project_id: 'p1', name: 'UI Components', description: 'Các thành phần giao diện', progress: 70 }
 ];
 
 // Bảng Cycles
 export const mockCycles: Cycle[] = [
-  { id: 'c1', project_id: 'p1', name: 'Cycle 1: Tuần 1', start_date: '2026-06-29', end_date: '2026-07-05' },
-  { id: 'c2', project_id: 'p1', name: 'Cycle 2: Tuần 2', start_date: '2026-07-06', end_date: '2026-07-12' }
+  { id: 'c1', project_id: 'p1', name: 'Cycle 1: Tuần 1', start_date: '2026-06-29', end_date: '2026-07-05', progress: 45 },
+  { id: 'c2', project_id: 'p1', name: 'Cycle 2: Tuần 2', start_date: '2026-07-06', end_date: '2026-07-12', progress: 20 }
 ];
 
 // Bảng Issues

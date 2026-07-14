@@ -9,7 +9,7 @@
  */
 
 import { http, HttpResponse } from "msw";
-import { mockUsers, mockWorkspaces, mockProjects, User, Workspace, Project, saveToStorage } from "./db";
+import { mockUsers, mockWorkspaces, mockProjects, mockCycles, mockModules, mockIssues, User, Workspace, Project, saveToStorage } from "./db";
 
 export const BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
 
@@ -267,5 +267,35 @@ export const handlers: ReturnType<typeof http.all>[] = [
       console.error("MSW Error in DELETE /projects:", e);
       return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
     }
+  }),
+
+  // --- MODULES ---
+  http.get(`${BASE}/modules`, async ({ request }) => {
+    const sessionId = getSessionId(request);
+    if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    return jsonResponse(mockModules);
+  }),
+
+  http.get(`${BASE}/modules/:id`, async ({ request, params }) => {
+    const sessionId = getSessionId(request);
+    if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    const moduleItem = mockModules.find(m => m.id === params.id);
+    if (!moduleItem) return jsonResponse({ error: "Module not found" }, { status: 404 });
+    return jsonResponse(moduleItem);
+  }),
+
+  // --- CYCLES ---
+  http.get(`${BASE}/cycles`, async ({ request }) => {
+    const sessionId = getSessionId(request);
+    if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    return jsonResponse(mockCycles);
+  }),
+
+  http.get(`${BASE}/cycles/:id`, async ({ request, params }) => {
+    const sessionId = getSessionId(request);
+    if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    const cycle = mockCycles.find(c => c.id === params.id);
+    if (!cycle) return jsonResponse({ error: "Cycle not found" }, { status: 404 });
+    return jsonResponse(cycle);
   }),
 ];

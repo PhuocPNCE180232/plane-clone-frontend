@@ -26,9 +26,9 @@ function getDaysLeft(endDate: string): number {
 export const CycleCard = ({ cycle, issues }: CycleCardProps) => {
   const totalIssues     = issues.length;
   const completedIssues = issues.filter((i) => i.state === "Done").length;
-  const progressPercent = totalIssues > 0
+  const progressPercent = cycle.progress ?? (totalIssues > 0
     ? Math.round((completedIssues / totalIssues) * 100)
-    : 0;
+    : 0);
   const daysLeft = getDaysLeft(cycle.end_date);
 
   const daysLabel =

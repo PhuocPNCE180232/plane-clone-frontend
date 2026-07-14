@@ -28,6 +28,7 @@ export interface Module {
   projectId: string;
   name: string;
   description?: string;
+  progress?: number;
 }
 
 // ─── DTO types ─────────────────────────────────────────────────────────────

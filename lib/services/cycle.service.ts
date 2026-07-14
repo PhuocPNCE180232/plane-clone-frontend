@@ -25,10 +25,10 @@ import { get, post, patch, del } from "@/lib/api/request";
 
 export interface Cycle {
   id: string;
-  projectId: string;
+  project_id: string;
   name: string;
-  startDate: string;
-  endDate: string;
+  start_date: string;
+  end_date: string;
 }
 
 // ─── DTO types ─────────────────────────────────────────────────────────────

@@ -37,7 +37,7 @@ export const ModuleCard = ({ module }: ModuleCardProps) => {
   const total        = moduleIssues.length;
   const completed    = moduleIssues.filter((i) => i.state === "Done").length;
   const inProgress   = moduleIssues.filter((i) => i.state === "In Progress").length;
-  const progressPct  = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const progressPct  = module.progress ?? (total > 0 ? Math.round((completed / total) * 100) : 0);
 
   return (
     <div
