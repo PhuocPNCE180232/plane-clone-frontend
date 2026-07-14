@@ -1,8 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { ListFilter, Plus } from "lucide-react";
+import { CycleForm } from "./CycleForm";
 
 export const CycleHeader = () => {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
   return (
     <div className="mb-6 flex items-start justify-between">
       {/* Left: title + description */}
@@ -32,6 +36,8 @@ export const CycleHeader = () => {
 
         {/* Add Cycle */}
         <button
+          type="button"
+          onClick={() => setIsFormOpen(true)}
           className="
             flex items-center gap-1.5
             rounded-md bg-[#3f76ff]
@@ -45,6 +51,30 @@ export const CycleHeader = () => {
           Add Cycle
         </button>
       </div>
+
+      {isFormOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Create cycle</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Add a new cycle to organise your work.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsFormOpen(false)}
+                className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <CycleForm onClose={() => setIsFormOpen(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
