@@ -9,7 +9,17 @@
  */
 
 import { http, HttpResponse } from "msw";
-import { mockUsers, mockWorkspaces, mockProjects, User, Workspace, Project, saveToStorage } from "./db";
+import {
+  mockUsers,
+  mockWorkspaces,
+  mockProjects,
+  mockIssues,
+  mockComments, // <── Sửa lỗi: Thêm import mockComments vào đây
+  User,
+  Workspace,
+  Project,
+  saveToStorage,
+} from "./db";
 
 export const BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
 
@@ -267,5 +277,89 @@ export const handlers: ReturnType<typeof http.all>[] = [
       console.error("MSW Error in DELETE /projects:", e);
       return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
     }
+  }),
+
+  // ─── CÁC ISSUES HANDLERS ───
+
+  // --- GET ALL ISSUES ---
+  http.get(`${BASE}/issues`, async ({ request }) => {
+    const sessionId = getSessionId(request);
+
+    if (!sessionId) {
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const url = new URL(request.url);
+    const projectId = url.searchParams.get("projectId") || url.searchParams.get("project_id");
+
+    const issues = projectId
+      ? mockIssues.filter((issue) => issue.project_id === projectId)
+      : mockIssues;
+
+    return jsonResponse(issues);
+  }),
+
+  // --- GET COMMENTS BY ISSUE ID ---
+  // Đưa handler này lên trước GET ISSUE BY ID để tránh xung đột định tuyến
+  http.get(`${BASE}/issues/:id/comments`, async ({ params }) => {
+    const issueId = params.id as string;
+
+    const comments = mockComments.filter(
+      (comment) => comment.issue_id === issueId
+    );
+
+    return jsonResponse(comments);
+  }),
+
+  // --- CREATE COMMENT ---
+  http.post(`${BASE}/issues/:id/comments`, async ({ request, params }) => {
+    const sessionId = getSessionId(request);
+
+    if (!sessionId) {
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const issueId = params.id as string;
+    const body = (await request.json()) as { content: string };
+
+    if (!body.content?.trim()) {
+      return jsonResponse(
+        { error: "Comment content is required" },
+        { status: 400 }
+      );
+    }
+
+    const newComment = {
+      id: `comment-${Date.now()}`,
+      issue_id: issueId,
+      user_id: sessionId,
+      content: body.content.trim(),
+      created_at: new Date().toISOString(),
+    };
+
+    mockComments.push(newComment);
+    saveToStorage("mockComments", mockComments);
+
+    return jsonResponse(newComment, { status: 201 });
+  }),
+
+  // --- GET ISSUE BY ID ---
+  http.get(`${BASE}/issues/:id`, async ({ request, params }) => {
+    const sessionId = getSessionId(request);
+
+    if (!sessionId) {
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const issue = mockIssues.find((item) => item.id === params.id);
+
+    if (!issue) {
+      return jsonResponse(
+        { error: "Issue not found" },
+        { status: 404 }
+      );
+    }
+
+    return jsonResponse(issue);
   }),
 ];
