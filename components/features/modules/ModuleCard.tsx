@@ -1,5 +1,10 @@
 import { MoreHorizontal, CircleDot, Clock, CheckCircle2 } from "lucide-react";
-import { Module, mockIssues } from "@/mocks/db";
+import { useState, type FormEvent } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { mockIssues } from "@/mocks/db";
+import type { Module } from "@/lib/services/module.service";
+import { deleteModule, updateModule } from "@/lib/services/module.service";
+import { createModuleSchema } from "@/lib/validations/module";
 
 type ModuleCardProps = {
   module: Module;
@@ -30,7 +35,22 @@ function initials(name: string) {
 }
 
 export const ModuleCard = ({ module }: ModuleCardProps) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const queryClient = useQueryClient();
   const accent = accentFor(module.name);
+
+  const { mutate: handleDeleteModule, isPending: isDeleting } = useMutation({
+    mutationFn: () => deleteModule(module.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["modules"] });
+      setIsMenuOpen(false);
+    },
+    onError: (error) => {
+      console.error("Failed to delete module:", error);
+      alert("Failed to delete module. Please try again.");
+    },
+  });
 
   // Derive counts from mockIssues — read-only, no backend
   const moduleIssues = mockIssues.filter((i) => i.module_id === module.id);
@@ -39,44 +59,82 @@ export const ModuleCard = ({ module }: ModuleCardProps) => {
   const inProgress   = moduleIssues.filter((i) => i.state === "In Progress").length;
   const progressPct  = module.progress ?? (total > 0 ? Math.round((completed / total) * 100) : 0);
 
+  const onDelete = () => {
+    setIsMenuOpen(false);
+    const confirmed = window.confirm("Delete this module? This action cannot be undone.");
+    if (confirmed) {
+      handleDeleteModule();
+    }
+  };
+
   return (
-    <div
-      className="
-        group relative flex flex-col
-        rounded-xl border border-gray-200 bg-white
-        p-4 shadow-sm
-        cursor-pointer
-        hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300
-        transition-all duration-200
-      "
-    >
-      {/* ── Top row: icon + title + ••• menu ──────────────────────── */}
-      <div className="mb-2 flex items-center gap-2.5">
-        {/* Identifier avatar — smaller, inline */}
-        <div
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[11px] font-bold tracking-wide ${accent.bg} ${accent.text}`}
-        >
-          {initials(module.name)}
+    <>
+      <div
+        className="
+          group relative flex flex-col
+          rounded-xl border border-gray-200 bg-white
+          p-4 shadow-sm
+          cursor-pointer
+          hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300
+          transition-all duration-200
+        "
+      >
+        {/* ── Top row: icon + title + ••• menu ──────────────────────── */}
+        <div className="mb-2 flex items-center gap-2.5">
+          {/* Identifier avatar — smaller, inline */}
+          <div
+            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[11px] font-bold tracking-wide ${accent.bg} ${accent.text}`}
+          >
+            {initials(module.name)}
+          </div>
+
+          {/* Title */}
+          <h3 className="flex-1 truncate text-sm font-semibold text-gray-900 leading-snug group-hover:text-[#3f76ff] transition-colors">
+            {module.name}
+          </h3>
+
+          {/* ••• menu */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setIsMenuOpen((current) => !current);
+              }}
+              className="
+                shrink-0 rounded p-1 text-gray-300
+                hover:bg-gray-100 hover:text-gray-600
+                transition-all
+              "
+              aria-label="More options"
+            >
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </button>
+
+            {isMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-40 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl z-20">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditOpen(true);
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  disabled={isDeleting}
+                  className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-red-600 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-
-        {/* Title */}
-        <h3 className="flex-1 truncate text-sm font-semibold text-gray-900 leading-snug group-hover:text-[#3f76ff] transition-colors">
-          {module.name}
-        </h3>
-
-        {/* ••• menu — always in DOM, visible on hover */}
-        <button
-          className="
-            shrink-0 rounded p-1 text-gray-300
-            opacity-0 group-hover:opacity-100
-            hover:bg-gray-100 hover:text-gray-600
-            transition-all
-          "
-          aria-label="More options"
-        >
-          <MoreHorizontal className="h-3.5 w-3.5" />
-        </button>
-      </div>
 
       {/* ── Description ───────────────────────────────────────────── */}
       <p className="mb-3 text-[11px] leading-relaxed text-gray-400 line-clamp-2">
@@ -115,6 +173,143 @@ export const ModuleCard = ({ module }: ModuleCardProps) => {
           <Clock className="h-3 w-3" />
           2h ago
         </span>
+      </div>
+    </div>
+
+    {isEditOpen && (
+      <ModuleEditModal
+        module={module}
+        onClose={() => setIsEditOpen(false)}
+        onSuccess={() => setIsEditOpen(false)}
+      />
+    )}
+  </>
+  );
+};
+
+const ModuleEditModal = ({
+  module,
+  onClose,
+  onSuccess,
+}: {
+  module: Module;
+  onClose: () => void;
+  onSuccess: () => void;
+}) => {
+  const queryClient = useQueryClient();
+  const [title, setTitle] = useState(module.name);
+  const [description, setDescription] = useState(module.description ?? "");
+  const [startDate, setStartDate] = useState(module.start_date ?? "");
+  const [endDate, setEndDate] = useState(module.end_date ?? "");
+
+  const { mutate: handleUpdateModule, isPending } = useMutation({
+    mutationFn: () =>
+      updateModule(module.id, {
+        name: title,
+        description,
+        start_date: startDate,
+        end_date: endDate,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["modules"] });
+      onSuccess();
+    },
+    onError: (error) => {
+      console.error("Failed to update module:", error);
+      alert("Failed to update module. Please try again.");
+    },
+  });
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const validation = createModuleSchema.safeParse({ title, description, startDate, endDate });
+    if (!validation.success) {
+      const first = validation.error.issues[0];
+      alert(first.message || "Validation error");
+      return;
+    }
+
+    handleUpdateModule();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Edit module</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Update the module title and description.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+          >
+            ✕
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <label className="block">
+            <span className="text-sm font-medium text-gray-700">Title</span>
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-black"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-medium text-gray-700">Description</span>
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              rows={4}
+              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-black"
+            />
+          </label>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block">
+              <span className="text-sm font-medium text-gray-700">Start date</span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(event) => setStartDate(event.target.value)}
+                className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-black"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-gray-700">End date</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(event) => setEndDate(event.target.value)}
+                className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-black"
+              />
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border px-3 py-1 text-sm bg-white text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="rounded-md bg-[#3f76ff] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+            >
+              {isPending ? "Saving..." : "Save changes"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

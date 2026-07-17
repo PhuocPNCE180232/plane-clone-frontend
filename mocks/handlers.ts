@@ -9,7 +9,7 @@
  */
 
 import { http, HttpResponse } from "msw";
-import { mockUsers, mockWorkspaces, mockProjects, mockCycles, mockModules, mockIssues, User, Workspace, Project, saveToStorage } from "./db";
+import { mockUsers, mockWorkspaces, mockProjects, mockCycles, mockModules, mockIssues, User, Workspace, Project, Module, saveToStorage } from "./db";
 
 export const BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
 
@@ -276,12 +276,78 @@ export const handlers: ReturnType<typeof http.all>[] = [
     return jsonResponse(mockModules);
   }),
 
+  http.post(`${BASE}/modules`, async ({ request }) => {
+    try {
+      const body = (await request.json()) as any;
+      const sessionId = getSessionId(request);
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const newModule: Module = {
+        id: `m${Date.now()}`,
+        project_id: body.project_id || "p1",
+        name: body.name,
+        description: body.description || "",
+        progress: body.progress ?? 0,
+      };
+
+      mockModules.push(newModule);
+      saveToStorage("mockModules", mockModules);
+
+      return jsonResponse(newModule, { status: 201 });
+    } catch (e: any) {
+      console.error("MSW Error in POST /modules:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
+  }),
+
   http.get(`${BASE}/modules/:id`, async ({ request, params }) => {
     const sessionId = getSessionId(request);
     if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
     const moduleItem = mockModules.find(m => m.id === params.id);
     if (!moduleItem) return jsonResponse({ error: "Module not found" }, { status: 404 });
     return jsonResponse(moduleItem);
+  }),
+
+  http.patch(`${BASE}/modules/:id`, async ({ request, params }) => {
+    try {
+      const { id } = params;
+      const body = (await request.json()) as any;
+      const sessionId = getSessionId(request);
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const index = mockModules.findIndex((m) => m.id === id);
+      if (index === -1) return jsonResponse({ error: "Module not found" }, { status: 404 });
+
+      mockModules[index] = {
+        ...mockModules[index],
+        ...body,
+      };
+      saveToStorage("mockModules", mockModules);
+
+      return jsonResponse(mockModules[index]);
+    } catch (e: any) {
+      console.error("MSW Error in PATCH /modules/:id:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
+  }),
+
+  http.delete(`${BASE}/modules/:id`, async ({ request, params }) => {
+    try {
+      const { id } = params;
+      const sessionId = getSessionId(request);
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const index = mockModules.findIndex((m) => m.id === id);
+      if (index === -1) return jsonResponse({ error: "Module not found" }, { status: 404 });
+
+      mockModules.splice(index, 1);
+      saveToStorage("mockModules", mockModules);
+
+      return jsonResponse({ success: true });
+    } catch (e: any) {
+      console.error("MSW Error in DELETE /modules/:id:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
   }),
 
   // --- CYCLES ---
@@ -291,11 +357,79 @@ export const handlers: ReturnType<typeof http.all>[] = [
     return jsonResponse(mockCycles);
   }),
 
+  http.post(`${BASE}/cycles`, async ({ request }) => {
+    try {
+      const body = (await request.json()) as any;
+      const sessionId = getSessionId(request);
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const newCycle = {
+        id: `c${Date.now()}`,
+        project_id: body.project_id || "p1",
+        name: body.name,
+        description: body.description || "",
+        start_date: body.start_date || "",
+        end_date: body.end_date || "",
+        progress: body.progress ?? 0,
+      };
+
+      mockCycles.push(newCycle);
+      saveToStorage("mockCycles", mockCycles);
+
+      return jsonResponse(newCycle, { status: 201 });
+    } catch (e: any) {
+      console.error("MSW Error in POST /cycles:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
+  }),
+
   http.get(`${BASE}/cycles/:id`, async ({ request, params }) => {
     const sessionId = getSessionId(request);
     if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
     const cycle = mockCycles.find(c => c.id === params.id);
     if (!cycle) return jsonResponse({ error: "Cycle not found" }, { status: 404 });
     return jsonResponse(cycle);
+  }),
+
+  http.patch(`${BASE}/cycles/:id`, async ({ request, params }) => {
+    try {
+      const { id } = params;
+      const body = (await request.json()) as any;
+      const sessionId = getSessionId(request);
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const index = mockCycles.findIndex((c) => c.id === id);
+      if (index === -1) return jsonResponse({ error: "Cycle not found" }, { status: 404 });
+
+      mockCycles[index] = {
+        ...mockCycles[index],
+        ...body,
+      };
+      saveToStorage("mockCycles", mockCycles);
+
+      return jsonResponse(mockCycles[index]);
+    } catch (e: any) {
+      console.error("MSW Error in PATCH /cycles/:id:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
+  }),
+
+  http.delete(`${BASE}/cycles/:id`, async ({ request, params }) => {
+    try {
+      const { id } = params;
+      const sessionId = getSessionId(request);
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const index = mockCycles.findIndex((c) => c.id === id);
+      if (index === -1) return jsonResponse({ error: "Cycle not found" }, { status: 404 });
+
+      mockCycles.splice(index, 1);
+      saveToStorage("mockCycles", mockCycles);
+
+      return jsonResponse({ success: true });
+    } catch (e: any) {
+      console.error("MSW Error in DELETE /cycles/:id:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
   }),
 ];

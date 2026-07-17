@@ -27,8 +27,10 @@ export interface Cycle {
   id: string;
   project_id: string;
   name: string;
+  description?: string;
   start_date: string;
   end_date: string;
+  progress?: number;
 }
 
 // ─── DTO types ─────────────────────────────────────────────────────────────
