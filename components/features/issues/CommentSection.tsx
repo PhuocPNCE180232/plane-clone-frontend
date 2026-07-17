@@ -1,48 +1,84 @@
-const mockComments = [
-  {
-    id: "comment-1",
-    user: {
-      name: "Olivia Rhye",
-      avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704d",
-    },
-    createdAt: "2 hours ago",
-    content:
-      "This looks good. What's the timeline for the backend implementation? We should align on the API contract before moving forward.",
-  },
-  {
-    id: "comment-2",
-    user: {
-      name: "Phoenix Baker",
-      avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704e",
-    },
-    createdAt: "1 hour ago",
-    content:
-      "I've pushed a draft PR with the initial API spec. Please take a look and provide feedback.",
-  },
-];
+"use client";
 
-export const CommentSection = () => {
+import { useEffect, useState } from "react";
+import { createComment, getComments } from "@/lib/services/comment.service";
+import type { Comment } from "@/types";
+import { mockUsers } from "@/mocks/db";
+
+interface CommentSectionProps {
+  issueId: string;
+}
+
+export const CommentSection = ({ issueId }: CommentSectionProps) => {
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [content, setContent] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const loadComments = async () => {
+      try {
+        const data = await getComments(issueId);
+        setComments(data);
+      } catch (error) {
+        console.error("Failed to load comments:", error);
+      }
+    };
+
+    loadComments();
+  }, [issueId]);
+
+  const handleSubmit = async () => {
+    if (!content.trim() || isSubmitting) return;
+
+    try {
+      setIsSubmitting(true);
+
+      const newComment = await createComment(issueId, content);
+
+      setComments((prev) => [...prev, newComment]);
+      setContent("");
+    } catch (error) {
+      console.error("Failed to create comment:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+
   return (
-    <div className="mt-8 pt-8 border-t border-gray-200">
+    <div className="mt-8 border-t border-gray-200 pt-8">
       <h2 className="text-lg font-semibold text-gray-800">Comments</h2>
 
       {/* New Comment Form */}
       <div className="mt-4 flex gap-4">
-        <div className="h-8 w-8 shrink-0 rounded-full bg-gray-300" title="You" />
+        <div className="h-8 w-8 shrink-0 rounded-full bg-gray-300" />
+
         <div className="flex-1">
-          <div className="rounded-lg border border-gray-300 bg-white">
+          <div className="rounded-lg border border-gray-300 bg-white shadow-sm focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
             <textarea
-              className="w-full resize-none rounded-t-lg border-0 bg-transparent p-3 text-sm text-gray-800 placeholder-gray-400 focus:ring-0"
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+              className="w-full resize-none rounded-t-lg border-0 bg-transparent p-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-0"
               placeholder="Leave a comment..."
               rows={3}
             />
+
             <div className="flex items-center justify-end rounded-b-lg border-t border-gray-200 bg-gray-50 px-3 py-2">
               <button
                 type="button"
-                className="rounded-md bg-gray-200 px-3 py-1.5 text-xs font-medium text-gray-500"
-                disabled
+                onClick={handleSubmit}
+                disabled={!content.trim() || isSubmitting}
+                className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
               >
-                Comment
+                {isSubmitting ? "Posting..." : "Comment"}
               </button>
             </div>
           </div>
@@ -51,26 +87,52 @@ export const CommentSection = () => {
 
       {/* Existing Comments */}
       <div className="mt-6 space-y-6">
-        {mockComments.map((comment) => (
-          <div key={comment.id} className="flex gap-4">
-            <img
-              src={comment.user.avatar}
-              alt={comment.user.name}
-              className="h-8 w-8 rounded-full object-cover"
-            />
-            <div className="flex-1">
-              <div className="flex items-baseline gap-2">
-                <span className="text-sm font-semibold text-gray-900">
-                  {comment.user.name}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {comment.createdAt}
-                </span>
+        {comments.length === 0 ? (
+          <p className="text-sm italic text-gray-500">
+            No comments yet. Be the first to reply!
+          </p>
+        ) : (
+          comments.map((comment) => {
+            const user = mockUsers.find(
+              (item) => item.id === comment.user_id
+            );
+
+            return (
+              <div key={comment.id} className="flex gap-4">
+                {/* Avatar */}
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    className="h-8 w-8 shrink-0 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-300 text-xs font-medium text-gray-600">
+                    {user?.name?.charAt(0) ?? "?"}
+                  </div>
+                )}
+
+                <div className="flex-1">
+                  {/* User + Time */}
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-sm font-semibold text-gray-900">
+                      {user?.name ?? "Unknown User"}
+                    </span>
+
+                    <span className="text-xs text-gray-500">
+                      {formatDate(comment.created_at)}
+                    </span>
+                  </div>
+
+                  {/* Comment Content */}
+                  <p className="mt-1 whitespace-pre-line text-sm text-gray-700">
+                    {comment.content}
+                  </p>
+                </div>
               </div>
-              <p className="mt-1 text-sm text-gray-700">{comment.content}</p>
-            </div>
-          </div>
-        ))}
+            );
+          })
+        )}
       </div>
     </div>
   );
