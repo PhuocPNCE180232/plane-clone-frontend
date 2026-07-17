@@ -38,6 +38,14 @@ export interface Issue {
   created_at: string;
 }
 
+export interface Comment {
+  id: string;
+  issue_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+}
+
 export interface Cycle {
   id: string;
   project_id: string;
@@ -58,25 +66,34 @@ export interface Module {
   end_date?: string;
 }
 
-// 2. KHỞI TẠO DỮ LIỆU MẪU (MOCK DATA)
+// 2. CÁC HÀM TRỢ GIÚP LƯU TRỮ (STORAGE HELPERS)
 
 const isBrowser = typeof window !== 'undefined';
 
-const loadFromStorage = <T>(key: string, defaultValue: T): T => {
-  if (!isBrowser) return defaultValue;
-  const stored = localStorage.getItem(key);
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch (e) {}
+function loadFromStorage<T>(key: string, fallback: T): T {
+  if (!isBrowser) {
+    return fallback;
   }
-  return defaultValue;
-};
+
+  const stored = localStorage.getItem(key);
+
+  if (!stored) {
+    return fallback;
+  }
+
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return fallback;
+  }
+}
 
 export const saveToStorage = (key: string, value: any) => {
   if (!isBrowser) return;
   localStorage.setItem(key, JSON.stringify(value));
 };
+
+// 3. KHỞI TẠO DỮ LIỆU MẪU (MOCK DATA)
 
 // Bảng Users (7 anh em team Plane Clone)
 const defaultUsers: User[] = [
@@ -89,7 +106,6 @@ const defaultUsers: User[] = [
   { id: 'u7', name: 'Đức', email: 'duc@example.com', avatar: 'https://i.pravatar.cc/150?u=u7', password: 'password123' },
 ];
 
-// Load from storage, but fall back to default if stored data is missing password field (migration)
 const storedUsers = loadFromStorage<User[]>('mockUsers', defaultUsers);
 const needsMigration = storedUsers.some(u => !u.password);
 export let mockUsers: User[] = needsMigration ? defaultUsers : storedUsers;
@@ -123,29 +139,29 @@ export let mockWorkspaces: Workspace[] = storedWorkspaces;
 
 // Bảng Projects
 const defaultProjects: Project[] = [
-  { 
-    id: 'p1', 
-    workspaceId: 'w1', 
-    name: 'Plane Clone', 
-    identifier: 'FE', 
+  {
+    id: 'p1',
+    workspaceId: 'w1',
+    name: 'Plane Clone',
+    identifier: 'FE',
     description: 'Dự án OJT 4 tuần clone Plane.so',
     createdAt: new Date(Date.now() - 3600000 * 24 * 2).toISOString(), // 2 days ago
     network: 'public',
   },
-  { 
-    id: 'p2', 
-    workspaceId: 'w1', 
-    name: 'Backend API', 
-    identifier: 'BE', 
+  {
+    id: 'p2',
+    workspaceId: 'w1',
+    name: 'Backend API',
+    identifier: 'BE',
     description: 'Xây dựng API cho dự án',
     createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
     network: 'private',
   },
-  { 
-    id: 'p3', 
-    workspaceId: 'w1', 
-    name: 'Mobile App', 
-    identifier: 'APP', 
+  {
+    id: 'p3',
+    workspaceId: 'w1',
+    name: 'Mobile App',
+    identifier: 'APP',
     description: 'Phát triển ứng dụng di động',
     createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
     network: 'public',
@@ -241,3 +257,109 @@ export const mockIssues: Issue[] = [
     created_at: '2026-07-03T00:00:00Z'
   }
 ];
+
+// Bảng Comments mẫu
+const defaultComments: Comment[] = [
+  {
+    id: "comment-1",
+    issue_id: "FE-1",
+    user_id: "u1",
+    content:
+      "This looks good. What's the timeline for the backend implementation?",
+    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "comment-2",
+    issue_id: "FE-1",
+    user_id: "u2",
+    content:
+      "I've pushed a draft PR with the initial API spec. Please take a look and provide feedback.",
+    created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "comment-3",
+    issue_id: "FE-1",
+    user_id: "u3",
+    content:
+      "I agree with this approach. We should also add proper error handling before merging.",
+    created_at: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "comment-4",
+    issue_id: "FE-1",
+    user_id: "u4",
+    content:
+      "The UI is looking clean so far. I think we can move forward with the current design.",
+    created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "comment-5",
+    issue_id: "FE-1",
+    user_id: "u1",
+    content:
+      "Can we confirm the API response format before starting the integration?",
+    created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "comment-6",
+    issue_id: "FE-2",
+    user_id: "u2",
+    content:
+      "I found a small issue when testing this flow on mobile devices.",
+    created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "comment-7",
+    issue_id: "FE-2",
+    user_id: "u3",
+    content:
+      "Thanks for reporting this. I'll investigate and push a fix shortly.",
+    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "comment-8",
+    issue_id: "FE-2",
+    user_id: "u4",
+    content:
+      "This should be fixed together with the next UI update.",
+    created_at: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "comment-9",
+    issue_id: "FE-2",
+    user_id: "u1",
+    content:
+      "Do we have an estimated completion date for this issue?",
+    created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "comment-10",
+    issue_id: "FE-2",
+    user_id: "u3",
+    content:
+      "The implementation is almost done. I just need to finish the final testing.",
+    created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+  },
+];
+
+// Merge dữ liệu mẫu mới với dữ liệu đã lưu trong localStorage
+const storedComments = loadFromStorage<Comment[]>(
+  "mockComments",
+  []
+);
+
+const commentMap = new Map(
+  storedComments.map((comment) => [comment.id, comment])
+);
+
+defaultComments.forEach((comment) => {
+  if (!commentMap.has(comment.id)) {
+    commentMap.set(comment.id, comment);
+  }
+});
+
+export let mockComments: Comment[] = Array.from(commentMap.values());
+
+if (isBrowser) {
+  saveToStorage("mockComments", mockComments);
+}

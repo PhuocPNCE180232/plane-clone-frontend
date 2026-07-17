@@ -5,8 +5,14 @@ import {
   ArrowDown,
   Minus,
 } from "lucide-react";
+import type { ReactNode } from "react";
 
-type IssuePriority = "Urgent" | "High" | "Medium" | "Low" | "None";
+type IssuePriority =
+  | "Urgent"
+  | "High"
+  | "Medium"
+  | "Low"
+  | "None";
 
 type IssuePriorityBadgeProps = {
   priority: IssuePriority;
@@ -14,28 +20,36 @@ type IssuePriorityBadgeProps = {
 
 const priorityConfig: Record<
   IssuePriority,
-  { label: string; icon: React.ReactNode; textClass: string }
+  {
+    label: string;
+    icon: ReactNode;
+    textClass: string;
+  }
 > = {
   Urgent: {
     label: "Urgent",
     icon: <AlertCircle className="h-3.5 w-3.5" />,
     textClass: "text-red-500",
   },
+
   High: {
     label: "High",
     icon: <ArrowUp className="h-3.5 w-3.5" />,
     textClass: "text-orange-500",
   },
+
   Medium: {
     label: "Medium",
     icon: <ArrowRight className="h-3.5 w-3.5" />,
     textClass: "text-yellow-500",
   },
+
   Low: {
     label: "Low",
     icon: <ArrowDown className="h-3.5 w-3.5" />,
     textClass: "text-blue-400",
   },
+
   None: {
     label: "None",
     icon: <Minus className="h-3.5 w-3.5" />,
@@ -43,12 +57,14 @@ const priorityConfig: Record<
   },
 };
 
-export const IssuePriorityBadge = ({ priority }: IssuePriorityBadgeProps) => {
-  const config = priorityConfig[priority] ?? priorityConfig["None"];
+export const IssuePriorityBadge = ({
+  priority,
+}: IssuePriorityBadgeProps) => {
+  const config = priorityConfig[priority] ?? priorityConfig.None;
 
   return (
     <span
-      className={`flex items-center gap-1.5 text-xs font-medium whitespace-nowrap ${config.textClass}`}
+      className={`flex items-center gap-1.5 whitespace-nowrap text-xs font-medium ${config.textClass}`}
       title={config.label}
     >
       {config.icon}

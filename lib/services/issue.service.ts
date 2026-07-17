@@ -22,7 +22,7 @@
 
 import { get, post, patch, del } from "@/lib/api/request";
 import type { Issue } from "@/types";
-
+import type { Comment } from "@/mocks/db";
 // ─── DTO types ─────────────────────────────────────────────────────────────
 
 /**
@@ -37,8 +37,10 @@ export type UpdateIssueDto = Partial<CreateIssueDto>;
 // ─── Service functions ─────────────────────────────────────────────────────
 
 /** Returns all issues the current user can access. */
-export const getIssues = (): Promise<Issue[]> =>
-  get<Issue[]>("/issues");
+export const getIssues = (projectId?: string): Promise<Issue[]> =>
+  get<Issue[]>(
+    projectId ? `/issues?projectId=${projectId}` : "/issues"
+  );
 
 /** Returns a single issue by its ID. */
 export const getIssueById = (id: string): Promise<Issue> =>
@@ -58,3 +60,8 @@ export const updateIssue = (
 /** Deletes an issue. Most backends return 204 No Content. */
 export const deleteIssue = (id: string): Promise<void> =>
   del<void>(`/issues/${id}`);
+
+export const getCommentsByIssueId = (
+  issueId: string
+): Promise<Comment[]> =>
+  get<Comment[]>(`/issues/${issueId}/comments`);
