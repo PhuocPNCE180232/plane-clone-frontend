@@ -50,7 +50,7 @@ export const CreateWorkspaceModal = ({ isOpen, onClose }: CreateWorkspaceModalPr
     handleCreateWorkspace({
       name,
       slug: url,
-      owner_id: user.id,
+      ownerId: user.id,
     });
   };
 

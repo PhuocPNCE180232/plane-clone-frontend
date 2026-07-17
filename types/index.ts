@@ -2,6 +2,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  avatar?: string;
   avatarUrl?: string;
 }
 
@@ -20,7 +21,7 @@ export interface Project {
   identifier: string;
   description?: string;
   createdAt: string;
-  network: "public" | "private";
+  network?: "public" | "private";
 }
 
 export interface Issue {
