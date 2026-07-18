@@ -5,6 +5,7 @@ import { createWorkspace } from "@/lib/services/workspace.service";
 import { useAppStore } from "@/hooks/use-app-store";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
+import { toast } from "@/hooks/use-toast";
 
 type CreateWorkspaceModalProps = {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export const CreateWorkspaceModal = ({ isOpen, onClose }: CreateWorkspaceModalPr
       setUrl("");
       setErrorMsg("");
       onClose();
+      toast.success("Workspace created successfully.");
       // Navigate to new workspace
       router.push(`/${newWorkspace.slug}/projects`);
     },

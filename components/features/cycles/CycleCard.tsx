@@ -6,6 +6,8 @@ import { Cycle, Issue } from "@/mocks/db";
 import { deleteCycle, updateCycle } from "@/lib/services/cycle.service";
 import { CycleProgressBar } from "./CycleProgressBar";
 import { CycleStatusBadge } from "./CycleStatusBadge";
+import { toast } from "@/hooks/use-toast";
+import { confirm } from "@/hooks/use-confirm";
 
 type CycleCardProps = {
   cycle: Cycle;
@@ -42,11 +44,12 @@ export const CycleCard = ({ cycle, issues }: CycleCardProps) => {
     mutationFn: () => deleteCycle(cycle.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cycles"] });
+      toast.success("Cycle deleted successfully.");
       setIsMenuOpen(false);
     },
     onError: (error) => {
       console.error("Failed to delete cycle:", error);
-      alert("Failed to delete cycle. Please try again.");
+      toast.error("Failed to delete cycle. Please try again.");
     },
   });
 
@@ -64,10 +67,16 @@ export const CycleCard = ({ cycle, issues }: CycleCardProps) => {
       ? "Ends today"
       : `Ended ${Math.abs(daysLeft)}d ago`;
 
-  const onDelete = () => {
+  const onDelete = async () => {
     setIsMenuOpen(false);
-    const confirmed = window.confirm("Delete this cycle? This action cannot be undone.");
-    if (confirmed) {
+    const ok = await confirm({
+      title: "Delete Cycle",
+      description: "This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "danger",
+    });
+    if (ok) {
       handleDeleteCycle();
     }
   };
@@ -192,11 +201,12 @@ const CycleEditModal = ({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cycles"] });
+      toast.success("Cycle updated successfully.");
       onSuccess();
     },
     onError: (error) => {
       console.error("Failed to update cycle:", error);
-      alert("Failed to update cycle. Please try again.");
+      toast.error("Failed to update cycle. Please try again.");
     },
   });
 

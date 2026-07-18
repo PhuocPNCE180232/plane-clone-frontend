@@ -5,6 +5,8 @@ import { mockIssues } from "@/mocks/db";
 import type { Module } from "@/lib/services/module.service";
 import { deleteModule, updateModule } from "@/lib/services/module.service";
 import { createModuleSchema } from "@/lib/validations/module";
+import { toast } from "@/hooks/use-toast";
+import { confirm } from "@/hooks/use-confirm";
 
 type ModuleCardProps = {
   module: Module;
@@ -44,11 +46,12 @@ export const ModuleCard = ({ module }: ModuleCardProps) => {
     mutationFn: () => deleteModule(module.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["modules"] });
+      toast.success("Module deleted successfully.");
       setIsMenuOpen(false);
     },
     onError: (error) => {
       console.error("Failed to delete module:", error);
-      alert("Failed to delete module. Please try again.");
+      toast.error("Failed to delete module. Please try again.");
     },
   });
 
@@ -59,10 +62,16 @@ export const ModuleCard = ({ module }: ModuleCardProps) => {
   const inProgress   = moduleIssues.filter((i) => i.state === "In Progress").length;
   const progressPct  = module.progress ?? (total > 0 ? Math.round((completed / total) * 100) : 0);
 
-  const onDelete = () => {
+  const onDelete = async () => {
     setIsMenuOpen(false);
-    const confirmed = window.confirm("Delete this module? This action cannot be undone.");
-    if (confirmed) {
+    const ok = await confirm({
+      title: "Delete Module",
+      description: "This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "danger",
+    });
+    if (ok) {
       handleDeleteModule();
     }
   };
@@ -212,11 +221,12 @@ const ModuleEditModal = ({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["modules"] });
+      toast.success("Module updated successfully.");
       onSuccess();
     },
     onError: (error) => {
       console.error("Failed to update module:", error);
-      alert("Failed to update module. Please try again.");
+      toast.error("Failed to update module. Please try again.");
     },
   });
 
@@ -225,7 +235,7 @@ const ModuleEditModal = ({
     const validation = createModuleSchema.safeParse({ title, description, startDate, endDate });
     if (!validation.success) {
       const first = validation.error.issues[0];
-      alert(first.message || "Validation error");
+      toast.warning(first.message || "Validation error");
       return;
     }
 

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createProject } from "@/lib/services/project.service";
 import { useAppStore } from "@/hooks/use-app-store";
+import { toast } from "@/hooks/use-toast";
 
 type CreateProjectModalProps = {
   isOpen: boolean;
@@ -30,10 +31,12 @@ export const CreateProjectModal = ({ isOpen, onClose }: CreateProjectModalProps)
       setDescription("");
       setNetwork("public");
       
+      toast.success("Project created successfully.");
       onClose();
     },
     onError: (error) => {
       console.error("Failed to create project:", error);
+      toast.error("Failed to create project. Please try again.");
     }
   });
 

@@ -3,6 +3,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
+import { ToastContainer } from "@/components/ui/toast/ToastContainer";
+import { ConfirmModal } from "@/components/ui/confirm-modal/ConfirmModal";
 
 type ProvidersProps = {
   children: ReactNode;
@@ -44,6 +46,9 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
+      {/* Global UI — rendered via portals, always mounted once at the root */}
+      <ToastContainer />
+      <ConfirmModal />
     </QueryClientProvider>
   );
 }

@@ -6,6 +6,7 @@ import { createModuleSchema } from "@/lib/validations/module";
 import { createModule } from "@/lib/services/module.service";
 import { useAppStore } from "@/hooks/use-app-store";
 import { Archive, Clock, Play, Pause, CheckCircle, XCircle, Check } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 type Props = {
 	onClose: () => void;
@@ -115,11 +116,12 @@ export const ModuleForm = ({ onClose }: Props) => {
     mutationFn: createModule,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["modules"] });
+      toast.success("Module created successfully.");
       onClose();
     },
     onError: (error) => {
       console.error("Failed to create module:", error);
-      alert("Failed to create module. Please try again.");
+      toast.error("Failed to create module. Please try again.");
     },
   });
 
@@ -136,7 +138,7 @@ export const ModuleForm = ({ onClose }: Props) => {
     const res = createModuleSchema.safeParse(payload);
     if (!res.success) {
       const first = res.error.issues[0];
-      alert(first.message || "Validation error");
+      toast.warning(first.message || "Validation error");
       return;
     }
 
