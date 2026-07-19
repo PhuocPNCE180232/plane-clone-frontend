@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createCycleSchema } from "@/lib/validations/cycle";
 import { createCycle } from "@/lib/services/cycle.service";
 import { useAppStore } from "@/hooks/use-app-store";
+import { toast } from "@/hooks/use-toast";
 
 type Props = {
 	onClose: () => void;
@@ -60,11 +61,12 @@ export const CycleForm = ({ onClose }: Props) => {
 		mutationFn: createCycle,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["cycles"] });
+			toast.success("Cycle created successfully.");
 			onClose();
 		},
 		onError: (error) => {
 			console.error("Failed to create cycle:", error);
-			alert("Failed to create cycle. Please try again.");
+			toast.error("Failed to create cycle. Please try again.");
 		},
 	});
 
@@ -81,7 +83,7 @@ export const CycleForm = ({ onClose }: Props) => {
 		const res = createCycleSchema.safeParse(payload);
 		if (!res.success) {
 			const first = res.error.issues[0];
-			alert(first.message || "Validation error");
+			toast.warning(first.message || "Validation error");
 			return;
 		}
 

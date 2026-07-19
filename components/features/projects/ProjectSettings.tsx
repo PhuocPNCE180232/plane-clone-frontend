@@ -7,6 +7,8 @@ import { useProjects } from "@/hooks/use-projects";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateProject, deleteProject } from "@/lib/services/project.service";
 import { useAppStore } from "@/hooks/use-app-store";
+import { toast } from "@/hooks/use-toast";
+import { confirm } from "@/hooks/use-confirm";
 
 export const ProjectSettings = () => {
   const params = useParams();
@@ -39,11 +41,11 @@ export const ProjectSettings = () => {
     mutationFn: (data: any) => updateProject(projectId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects", activeWorkspaceId] });
-      alert("Project settings updated successfully!");
+      toast.success("Project updated successfully.");
     },
     onError: (error) => {
       console.error("Failed to update project:", error);
-      alert("Failed to update project settings.");
+      toast.error("Failed to update project settings.");
     }
   });
 
@@ -51,11 +53,12 @@ export const ProjectSettings = () => {
     mutationFn: () => deleteProject(projectId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects", activeWorkspaceId] });
+      toast.success("Project deleted successfully.");
       router.push(`/${slug}/projects`);
     },
     onError: (error) => {
       console.error("Failed to delete project:", error);
-      alert("Failed to delete project.");
+      toast.error("Failed to delete project.");
     }
   });
 
@@ -64,8 +67,15 @@ export const ProjectSettings = () => {
     handleUpdateProject({ name, identifier, description, network });
   };
 
-  const onDelete = () => {
-    if (confirm("Are you sure you want to delete this project? This action cannot be undone.")) {
+  const onDelete = async () => {
+    const ok = await confirm({
+      title: "Delete Project",
+      description: "The project will be permanently deleted, including all its issues, cycles, and settings. This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "danger",
+    });
+    if (ok) {
       handleDeleteProject();
     }
   };
