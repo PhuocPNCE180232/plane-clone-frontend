@@ -6,9 +6,10 @@ import { useProjects } from "@/hooks/use-projects";
 
 interface ProjectListProps {
   searchQuery?: string;
+  activeTab?: string;
 }
 
-export const ProjectList = ({ searchQuery = "" }: ProjectListProps) => {
+export const ProjectList = ({ searchQuery = "", activeTab = "all" }: ProjectListProps) => {
   const { data: projects, isLoading } = useProjects();
 
   if (isLoading) {
@@ -28,6 +29,11 @@ export const ProjectList = ({ searchQuery = "" }: ProjectListProps) => {
   }
 
   const filteredProjects = projects.filter((project) => {
+    // 1. Filter by tab
+    if (activeTab === "active" && project.status === "archived") return false;
+    if (activeTab === "archived" && project.status !== "archived") return false;
+
+    // 2. Filter by search query
     if (!searchQuery) return true;
     const lowerQuery = searchQuery.toLowerCase();
     return (

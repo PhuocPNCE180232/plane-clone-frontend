@@ -219,6 +219,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
         description: body.description || "",
         createdAt: new Date().toISOString(),
         network: body.network || "public",
+        status: "active",
       };
       mockProjects.push(newProject);
       saveToStorage("mockProjects", mockProjects);

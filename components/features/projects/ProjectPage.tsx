@@ -13,6 +13,7 @@ export const ProjectPage = () => {
 
     const activeWorkspace = workspaces?.find(w => w.id === activeWorkspaceId);
     const [searchQuery, setSearchQuery] = useState("");
+    const [activeTab, setActiveTab] = useState("all");
 
     return (
         <>
@@ -25,8 +26,13 @@ export const ProjectPage = () => {
                 <span className="font-medium text-gray-900">Projects</span>
             </div>
 
-            <ProjectHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
-            <ProjectList searchQuery={searchQuery} />
+            <ProjectHeader 
+              searchQuery={searchQuery} 
+              onSearchChange={setSearchQuery}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+            />
+            <ProjectList searchQuery={searchQuery} activeTab={activeTab} />
         </>
     );
 };
