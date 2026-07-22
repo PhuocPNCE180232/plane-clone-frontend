@@ -1,7 +1,6 @@
 import { X, Lock, Globe, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createProject } from "@/lib/services/project.service";
+import { useCreateProjectMutation } from "@/hooks/use-projects";
 import { useAppStore } from "@/hooks/use-app-store";
 import { toast } from "@/hooks/use-toast";
 
@@ -16,41 +15,41 @@ export const CreateProjectModal = ({ isOpen, onClose }: CreateProjectModalProps)
   const [description, setDescription] = useState("");
   const [network, setNetwork] = useState<"public" | "private">("public");
 
-  const queryClient = useQueryClient();
   const { activeWorkspaceId, setProject } = useAppStore();
 
-  const { mutate: handleCreateProject, isPending } = useMutation({
-    mutationFn: createProject,
-    onSuccess: (newProject) => {
-      queryClient.invalidateQueries({ queryKey: ["projects", activeWorkspaceId] });
-      setProject(newProject.id);
-      
-      // Reset form
-      setName("");
-      setIdentifier("");
-      setDescription("");
-      setNetwork("public");
-      
-      toast.success("Project created successfully.");
-      onClose();
-    },
-    onError: (error) => {
-      console.error("Failed to create project:", error);
-      toast.error("Failed to create project. Please try again.");
-    }
-  });
+  const { mutate: handleCreateProject, isPending } = useCreateProjectMutation();
 
   const onSubmit = () => {
     if (!name.trim() || !identifier.trim() || !activeWorkspaceId) return;
 
-    handleCreateProject({
-      name,
-      identifier,
-      description,
-      workspaceId: activeWorkspaceId,
-      network,
-    });
+    handleCreateProject(
+      {
+        name,
+        identifier,
+        description,
+        workspaceId: activeWorkspaceId,
+        network,
+      },
+      {
+        onSuccess: (newProject) => {
+          setProject(newProject.id);
+          // Reset form
+          setName("");
+          setIdentifier("");
+          setDescription("");
+          setNetwork("public");
+          toast.success("Project created successfully.");
+          onClose();
+        },
+        onError: (error) => {
+          console.error("Failed to create project:", error);
+          toast.error("Failed to create project. Please try again.");
+        },
+      }
+    );
   };
+
+
 
   if (!isOpen) return null;
 

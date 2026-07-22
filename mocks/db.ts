@@ -147,6 +147,7 @@ const defaultProjects: Project[] = [
     description: 'Dự án OJT 4 tuần clone Plane.so',
     createdAt: new Date(Date.now() - 3600000 * 24 * 2).toISOString(), // 2 days ago
     network: 'public',
+    status: 'active',
   },
   {
     id: 'p2',
@@ -156,25 +157,29 @@ const defaultProjects: Project[] = [
     description: 'Xây dựng API cho dự án',
     createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
     network: 'private',
+    status: 'active',
   },
   {
     id: 'p3',
-    workspaceId: 'w1',
+    workspaceId: 'w2',
     name: 'Mobile App',
     identifier: 'APP',
     description: 'Phát triển ứng dụng di động',
     createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
     network: 'public',
+    status: 'archived',
   }
 ];
 
 let storedProjects = loadFromStorage<Project[]>('mockProjects', defaultProjects);
-const needsProjectMigration = storedProjects.some(p => !p.createdAt || !p.network);
-if (needsProjectMigration) {
+
+if (storedProjects.length > 0) {
+  // Fix missing fields for old mock data
   storedProjects = storedProjects.map(p => ({
     ...p,
     createdAt: p.createdAt || new Date(Date.now() - 3600000 * 24).toISOString(),
-    network: p.network || "public"
+    network: p.network || "public",
+    status: p.status || "active",
   }));
   if (isBrowser) saveToStorage('mockProjects', storedProjects);
 }

@@ -22,6 +22,7 @@ export interface Project {
   description?: string;
   createdAt: string;
   network?: "public" | "private";
+  status?: "active" | "archived";
 }
 
 export interface Issue {

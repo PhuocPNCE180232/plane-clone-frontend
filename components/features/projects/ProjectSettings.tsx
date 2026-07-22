@@ -3,9 +3,8 @@
 import { useParams, useRouter } from "next/navigation";
 import { Lock, Globe, Trash2, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useProjects } from "@/hooks/use-projects";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updateProject, deleteProject } from "@/lib/services/project.service";
+import { useProjects, useUpdateProjectMutation, useDeleteProjectMutation } from "@/hooks/use-projects";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAppStore } from "@/hooks/use-app-store";
 import { toast } from "@/hooks/use-toast";
 import { confirm } from "@/hooks/use-confirm";
@@ -26,6 +25,7 @@ export const ProjectSettings = () => {
   const [identifier, setIdentifier] = useState("");
   const [description, setDescription] = useState("");
   const [network, setNetwork] = useState<"public" | "private">("public");
+  const [isArchiving, setIsArchiving] = useState(false);
 
   // Populate state when project data is loaded
   useEffect(() => {
@@ -37,34 +37,44 @@ export const ProjectSettings = () => {
     }
   }, [project]);
 
-  const { mutate: handleUpdateProject, isPending: isUpdating } = useMutation({
-    mutationFn: (data: any) => updateProject(projectId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects", activeWorkspaceId] });
-      toast.success("Project updated successfully.");
-    },
-    onError: (error) => {
-      console.error("Failed to update project:", error);
-      toast.error("Failed to update project settings.");
-    }
-  });
-
-  const { mutate: handleDeleteProject, isPending: isDeleting } = useMutation({
-    mutationFn: () => deleteProject(projectId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects", activeWorkspaceId] });
-      toast.success("Project deleted successfully.");
-      router.push(`/${slug}/projects`);
-    },
-    onError: (error) => {
-      console.error("Failed to delete project:", error);
-      toast.error("Failed to delete project.");
-    }
-  });
+  const { mutate: handleUpdateProject, isPending: isUpdating } = useUpdateProjectMutation();
+  const { mutate: handleDeleteProject, isPending: isDeleting } = useDeleteProjectMutation();
 
   const onUpdate = () => {
     if (!name.trim() || !identifier.trim()) return;
-    handleUpdateProject({ name, identifier, description, network });
+    handleUpdateProject(
+      { id: projectId, data: { name, identifier, description, network } },
+      {
+        onSuccess: () => {
+          toast.success("Project updated successfully.");
+        },
+        onError: (error) => {
+          console.error("Failed to update project:", error);
+          toast.error("Failed to update project settings.");
+        },
+      }
+    );
+  };
+
+  const onToggleArchive = () => {
+    if (!project) return;
+    setIsArchiving(true);
+    const newStatus = project.status === "archived" ? "active" : "archived";
+    
+    handleUpdateProject(
+      { id: projectId, data: { status: newStatus } },
+      {
+        onSuccess: () => {
+          toast.success(`Project ${newStatus === "archived" ? "archived" : "restored"} successfully.`);
+          setIsArchiving(false);
+        },
+        onError: (error) => {
+          console.error("Failed to toggle archive:", error);
+          toast.error(`Failed to ${newStatus === "archived" ? "archive" : "restore"} project.`);
+          setIsArchiving(false);
+        },
+      }
+    );
   };
 
   const onDelete = async () => {
@@ -76,7 +86,19 @@ export const ProjectSettings = () => {
       variant: "danger",
     });
     if (ok) {
-      handleDeleteProject();
+      handleDeleteProject(
+        { id: projectId },
+        {
+          onSuccess: () => {
+            toast.success("Project deleted successfully.");
+            router.push(`/${slug}/projects`);
+          },
+          onError: (error) => {
+            console.error("Failed to delete project:", error);
+            toast.error("Failed to delete project.");
+          },
+        }
+      );
     }
   };
 
@@ -207,13 +229,22 @@ export const ProjectSettings = () => {
         <div className="rounded-xl border border-red-200 bg-white shadow-sm overflow-hidden flex flex-col divide-y divide-red-100">
           <div className="p-6 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-medium text-gray-900">Archive Project</h3>
+              <h3 className="text-sm font-medium text-gray-900">
+                {project?.status === "archived" ? "Restore Project" : "Archive Project"}
+              </h3>
               <p className="mt-1 text-sm text-gray-500 max-w-xl">
-                Archiving the project will hide it from active views but retain all data.
+                {project?.status === "archived" 
+                  ? "Restoring the project will make it visible in active views again."
+                  : "Archiving the project will hide it from active views but retain all data."}
               </p>
             </div>
-            <button className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-              Archive project
+            <button 
+              onClick={onToggleArchive}
+              disabled={isArchiving || isUpdating}
+              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {isArchiving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {project?.status === "archived" ? "Restore project" : "Archive project"}
             </button>
           </div>
 

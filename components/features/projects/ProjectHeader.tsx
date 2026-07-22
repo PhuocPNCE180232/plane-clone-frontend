@@ -7,11 +7,17 @@ import { CreateProjectModal } from "./CreateProjectModal";
 interface ProjectHeaderProps {
   searchQuery?: string;
   onSearchChange?: (val: string) => void;
+  activeTab?: string;
+  onTabChange?: (val: string) => void;
 }
 
-export const ProjectHeader = ({ searchQuery = "", onSearchChange }: ProjectHeaderProps) => {
+export const ProjectHeader = ({ 
+  searchQuery = "", 
+  onSearchChange,
+  activeTab = "all",
+  onTabChange 
+}: ProjectHeaderProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("all");
   const [view, setView] = useState("grid");
 
   return (
@@ -45,7 +51,7 @@ export const ProjectHeader = ({ searchQuery = "", onSearchChange }: ProjectHeade
       <div className="flex items-center justify-between border-b border-gray-200">
         <div className="flex items-center gap-6">
           <button
-            onClick={() => setActiveTab("all")}
+            onClick={() => onTabChange?.("all")}
             className={`border-b-2 py-2 text-sm font-medium transition-colors ${
               activeTab === "all"
                 ? "border-[#3f76ff] text-gray-900"
@@ -55,7 +61,7 @@ export const ProjectHeader = ({ searchQuery = "", onSearchChange }: ProjectHeade
             All Projects
           </button>
           <button
-            onClick={() => setActiveTab("active")}
+            onClick={() => onTabChange?.("active")}
             className={`border-b-2 py-2 text-sm font-medium transition-colors ${
               activeTab === "active"
                 ? "border-[#3f76ff] text-gray-900"
@@ -65,7 +71,7 @@ export const ProjectHeader = ({ searchQuery = "", onSearchChange }: ProjectHeade
             Active
           </button>
           <button
-            onClick={() => setActiveTab("archived")}
+            onClick={() => onTabChange?.("archived")}
             className={`border-b-2 py-2 text-sm font-medium transition-colors ${
               activeTab === "archived"
                 ? "border-[#3f76ff] text-gray-900"
