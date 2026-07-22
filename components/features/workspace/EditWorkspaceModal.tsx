@@ -1,17 +1,16 @@
 "use client";
 
 import { X, Loader2, ChevronDown } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createWorkspace } from "@/lib/services/workspace.service";
-import { useAppStore } from "@/hooks/use-app-store";
-import { useAuth } from "@/hooks/use-auth";
-import { useRouter } from "next/navigation";
+import { updateWorkspace } from "@/lib/services/workspace.service";
 import { toast } from "@/hooks/use-toast";
+import type { Workspace } from "@/types";
 
-type CreateWorkspaceModalProps = {
+type EditWorkspaceModalProps = {
   isOpen: boolean;
   onClose: () => void;
+  workspace: Workspace;
 };
 
 const EMOJI_LIST = [
@@ -21,30 +20,20 @@ const EMOJI_LIST = [
   "🍀", "🎵", "🎮", "📱", "💻", "🔑", "🎁", "🏠",
 ];
 
-export const CreateWorkspaceModal = ({ isOpen, onClose }: CreateWorkspaceModalProps) => {
-  const [name, setName] = useState("");
-  const [url, setUrl] = useState("");
-  const [logo, setLogo] = useState("🚀");
+export const EditWorkspaceModal = ({ isOpen, onClose, workspace }: EditWorkspaceModalProps) => {
+  const [name, setName] = useState(workspace.name);
+  const [logo, setLogo] = useState(workspace.logo || "🚀");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
   const emojiPickerRef = useRef<HTMLDivElement>(null);
-
   const queryClient = useQueryClient();
-  const setWorkspace = useAppStore((state) => state.setWorkspace);
-  const { user } = useAuth();
-  const router = useRouter();
 
-  // Auto-generate URL from name
-  const handleNameChange = (value: string) => {
-    setName(value);
-    const slug = value
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-");
-    setUrl(slug);
-  };
+  // Sync state when workspace prop changes
+  useEffect(() => {
+    if (isOpen) {
+      setName(workspace.name);
+      setLogo(workspace.logo || "🚀");
+    }
+  }, [isOpen, workspace]);
 
   // Close emoji picker on outside click
   useEffect(() => {
@@ -57,36 +46,27 @@ export const CreateWorkspaceModal = ({ isOpen, onClose }: CreateWorkspaceModalPr
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const { mutate: handleCreateWorkspace, isPending } = useMutation({
-    mutationFn: createWorkspace,
-    onSuccess: (newWorkspace) => {
+  const { mutate: handleUpdate, isPending } = useMutation({
+    mutationFn: (data: { name: string; logo: string }) =>
+      updateWorkspace(workspace.id, data),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
-      setWorkspace(newWorkspace.id);
-      setName("");
-      setUrl("");
-      setLogo("🚀");
-      setErrorMsg("");
+      toast.success("Workspace updated successfully.");
       onClose();
-      toast.success("Workspace created successfully.");
-      router.push(`/${newWorkspace.slug}/projects`);
     },
     onError: (error: any) => {
-      console.error("Failed to create workspace:", error);
-      setErrorMsg(error?.message || "Failed to create workspace. Please try another URL.");
+      console.error("Failed to update workspace:", error);
+      toast.error(error?.message || "Failed to update workspace.");
     },
   });
 
   if (!isOpen) return null;
 
+  const hasChanges = name.trim() !== workspace.name || logo !== (workspace.logo || "🚀");
+
   const onSubmit = () => {
-    if (!name.trim() || !url.trim() || !user?.id) return;
-    setErrorMsg("");
-    handleCreateWorkspace({
-      name,
-      slug: url,
-      logo,
-      ownerId: user.id,
-    });
+    if (!name.trim()) return;
+    handleUpdate({ name: name.trim(), logo });
   };
 
   return (
@@ -94,7 +74,7 @@ export const CreateWorkspaceModal = ({ isOpen, onClose }: CreateWorkspaceModalPr
       <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-lg font-medium text-gray-900">Create workspace</h2>
+          <h2 className="text-lg font-medium text-gray-900">Edit workspace</h2>
           <button
             onClick={onClose}
             className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500 transition-colors"
@@ -105,7 +85,7 @@ export const CreateWorkspaceModal = ({ isOpen, onClose }: CreateWorkspaceModalPr
 
         {/* Content */}
         <div className="px-6 py-5 space-y-4">
-          {/* Logo + Name row */}
+          {/* Logo + Name */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
               Workspace name
@@ -151,7 +131,7 @@ export const CreateWorkspaceModal = ({ isOpen, onClose }: CreateWorkspaceModalPr
               <input
                 type="text"
                 value={name}
-                onChange={(e) => handleNameChange(e.target.value)}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Acme Corp"
                 className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#3f76ff] focus:outline-none focus:ring-1 focus:ring-[#3f76ff]"
                 autoFocus
@@ -159,30 +139,21 @@ export const CreateWorkspaceModal = ({ isOpen, onClose }: CreateWorkspaceModalPr
             </div>
           </div>
 
-          {/* URL */}
+          {/* Read-only URL info */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
               Workspace URL
+              <span className="ml-1.5 text-xs font-normal text-gray-400">(read-only — change in Settings)</span>
             </label>
-            <div className="flex w-full overflow-hidden rounded-md border border-gray-300 focus-within:border-[#3f76ff] focus-within:ring-1 focus-within:ring-[#3f76ff]">
-              <span className="flex items-center bg-gray-50 px-3 text-sm text-gray-500 border-r border-gray-300">
+            <div className="flex w-full overflow-hidden rounded-md border border-gray-200 bg-gray-50">
+              <span className="flex items-center px-3 text-sm text-gray-500 border-r border-gray-200">
                 plane.so/
               </span>
-              <input
-                type="text"
-                value={url}
-                onChange={(e) => setUrl(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                placeholder="acme-corp"
-                className="flex-1 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none"
-              />
+              <span className="flex-1 px-3 py-2 text-sm text-gray-500 select-all">
+                {workspace.slug}
+              </span>
             </div>
           </div>
-
-          {errorMsg && (
-            <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
-              {errorMsg}
-            </div>
-          )}
         </div>
 
         {/* Footer */}
@@ -196,16 +167,16 @@ export const CreateWorkspaceModal = ({ isOpen, onClose }: CreateWorkspaceModalPr
           </button>
           <button
             onClick={onSubmit}
-            disabled={isPending || !name.trim() || !url.trim()}
-            className="flex items-center justify-center min-w-[140px] rounded-md bg-[#3f76ff] px-4 py-2 text-sm font-medium text-white hover:bg-[#2d63e8] transition-colors disabled:opacity-50"
+            disabled={isPending || !name.trim() || !hasChanges}
+            className="flex items-center justify-center min-w-[120px] rounded-md bg-[#3f76ff] px-4 py-2 text-sm font-medium text-white hover:bg-[#2d63e8] transition-colors disabled:opacity-50"
           >
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating...
+                Saving...
               </>
             ) : (
-              "Create workspace"
+              "Save changes"
             )}
           </button>
         </div>

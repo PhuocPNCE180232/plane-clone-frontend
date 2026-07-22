@@ -52,6 +52,8 @@ export const useAuth = create<AuthState>()(
         } finally {
           // Clear the session cookie
           document.cookie = 'plane_session=; path=/; max-age=0';
+          // Clear persisted app state (workspace, project selection)
+          localStorage.removeItem('app-storage');
           set({ user: null, isAuthenticated: false });
         }
       },

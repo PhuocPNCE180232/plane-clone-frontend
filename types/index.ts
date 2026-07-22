@@ -10,6 +10,7 @@ export interface Workspace {
   id: string;
   name: string;
   slug: string;
+  logo?: string;
   ownerId: string;
   createdAt: string;
 }
