@@ -18,7 +18,9 @@ import type { Project } from "@/types";
 // ─── DTO types ─────────────────────────────────────────────────────────────
 
 /** Fields required when creating a new project. */
-export type CreateProjectDto = Omit<Project, "id" | "createdAt">;
+export type CreateProjectDto = Omit<Project, "id" | "createdAt"> & {
+  network?: Project["network"];
+};
 
 /** All fields are optional on update (partial edit). */
 export type UpdateProjectDto = Partial<CreateProjectDto>;

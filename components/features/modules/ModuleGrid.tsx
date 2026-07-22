@@ -1,9 +1,26 @@
+"use client";
+
 import { Boxes } from "lucide-react";
-import { mockModules } from "@/mocks/db";
 import { ModuleCard } from "./ModuleCard";
+import { useQuery } from "@tanstack/react-query";
+import { getModules } from "@/lib/services/module.service";
 
 export const ModuleGrid = () => {
-  if (mockModules.length === 0) {
+  const { data: modules = [], isLoading } = useQuery({
+    queryKey: ["modules"],
+    queryFn: getModules,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-gray-200 bg-white text-center shadow-sm">
+        <Boxes className="mb-3 h-10 w-10 text-gray-200 animate-spin" />
+        <p className="text-sm font-medium text-gray-500">Loading Modules...</p>
+      </div>
+    );
+  }
+
+  if (modules.length === 0) {
     return (
       <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-gray-200 bg-white text-center shadow-sm">
         <Boxes className="mb-3 h-10 w-10 text-gray-200" />
@@ -23,7 +40,7 @@ export const ModuleGrid = () => {
       </h2>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {mockModules.map((module) => (
+        {modules.map((module) => (
           <ModuleCard key={module.id} module={module} />
         ))}
       </div>

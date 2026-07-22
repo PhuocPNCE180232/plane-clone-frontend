@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createCycleSchema } from "@/lib/validations/cycle";
+import { createCycle } from "@/lib/services/cycle.service";
+import { useAppStore } from "@/hooks/use-app-store";
+import { toast } from "@/hooks/use-toast";
 
 type Props = {
 	onClose: () => void;
@@ -50,6 +54,22 @@ const DateRangeToggle = () => {
 };
 
 export const CycleForm = ({ onClose }: Props) => {
+	const queryClient = useQueryClient();
+	const { activeProjectId } = useAppStore();
+
+	const { mutate: handleCreateCycle, isPending } = useMutation({
+		mutationFn: createCycle,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["cycles"] });
+			toast.success("Cycle created successfully.");
+			onClose();
+		},
+		onError: (error) => {
+			console.error("Failed to create cycle:", error);
+			toast.error("Failed to create cycle. Please try again.");
+		},
+	});
+
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		const form = e.target as HTMLFormElement;
@@ -63,12 +83,18 @@ export const CycleForm = ({ onClose }: Props) => {
 		const res = createCycleSchema.safeParse(payload);
 		if (!res.success) {
 			const first = res.error.issues[0];
-			alert(first.message || "Validation error");
+			toast.warning(first.message || "Validation error");
 			return;
 		}
 
-		console.log("Create Cycle", res.data);
-		onClose();
+		handleCreateCycle({
+			project_id: activeProjectId || "p1",
+			name: res.data.title,
+			description: res.data.description || "",
+			start_date: res.data.startDate || "",
+			end_date: res.data.endDate || "",
+			progress: 0,
+		});
 	};
 
 	return (
@@ -94,8 +120,8 @@ export const CycleForm = ({ onClose }: Props) => {
 				<button type="button" onClick={onClose} className="rounded-md border px-3 py-1 text-sm bg-white text-black">
 					Cancel
 				</button>
-				<button type="submit" className="rounded-md bg-[#3f76ff] px-4 py-2 text-white">
-					Create cycle
+				<button type="submit" disabled={isPending} className="rounded-md bg-[#3f76ff] px-4 py-2 text-white disabled:opacity-60">
+					{isPending ? "Creating..." : "Create cycle"}
 				</button>
 			</div>
 		</form>

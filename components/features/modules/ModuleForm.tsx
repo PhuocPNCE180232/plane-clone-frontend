@@ -1,8 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createModuleSchema } from "@/lib/validations/module";
+import { createModule } from "@/lib/services/module.service";
+import { useAppStore } from "@/hooks/use-app-store";
 import { Archive, Clock, Play, Pause, CheckCircle, XCircle, Check } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 type Props = {
 	onClose: () => void;
@@ -105,6 +109,22 @@ const StatusDropdown = ({ name = "status" }: { name?: string }) => {
 };
 
 export const ModuleForm = ({ onClose }: Props) => {
+  const queryClient = useQueryClient();
+  const { activeProjectId } = useAppStore();
+
+  const { mutate: handleCreateModule, isPending } = useMutation({
+    mutationFn: createModule,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["modules"] });
+      toast.success("Module created successfully.");
+      onClose();
+    },
+    onError: (error) => {
+      console.error("Failed to create module:", error);
+      toast.error("Failed to create module. Please try again.");
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
@@ -118,12 +138,18 @@ export const ModuleForm = ({ onClose }: Props) => {
     const res = createModuleSchema.safeParse(payload);
     if (!res.success) {
       const first = res.error.issues[0];
-      alert(first.message || "Validation error");
+      toast.warning(first.message || "Validation error");
       return;
     }
 
-    console.log("Create Module", res.data);
-    onClose();
+    handleCreateModule({
+      project_id: activeProjectId || "p1",
+      name: res.data.title,
+      description: res.data.description || "",
+      start_date: res.data.startDate || "",
+      end_date: res.data.endDate || "",
+      progress: 0,
+    });
   };
 
   return (
@@ -157,8 +183,8 @@ export const ModuleForm = ({ onClose }: Props) => {
         <button type="button" onClick={onClose} className="rounded-md border px-3 py-1 text-sm bg-white text-black">
           Cancel
         </button>
-        <button type="submit" className="rounded-md bg-[#3f76ff] px-4 py-2 text-white">
-          Create Module
+        <button type="submit" disabled={isPending} className="rounded-md bg-[#3f76ff] px-4 py-2 text-white disabled:opacity-60">
+          {isPending ? "Creating..." : "Create Module"}
         </button>
       </div>
     </form>

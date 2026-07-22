@@ -25,9 +25,12 @@ import { get, post, patch, del } from "@/lib/api/request";
 
 export interface Module {
   id: string;
-  projectId: string;
+  project_id: string;
   name: string;
   description?: string;
+  progress?: number;
+  start_date?: string;
+  end_date?: string;
 }
 
 // ─── DTO types ─────────────────────────────────────────────────────────────

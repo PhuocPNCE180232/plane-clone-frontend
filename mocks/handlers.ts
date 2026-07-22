@@ -9,7 +9,20 @@
  */
 
 import { http, HttpResponse } from "msw";
-import { mockUsers, mockWorkspaces, mockProjects, User, Workspace, Project, saveToStorage } from "./db";
+import {
+  mockUsers,
+  mockWorkspaces,
+  mockProjects,
+  mockCycles,
+  mockModules,
+  mockIssues,
+  mockComments,
+  User,
+  Workspace,
+  Project,
+  Module,
+  saveToStorage,
+} from "./db";
 
 export const BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
 
@@ -268,5 +281,253 @@ export const handlers: ReturnType<typeof http.all>[] = [
       console.error("MSW Error in DELETE /projects:", e);
       return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
     }
+  }),
+
+  // --- MODULES ---
+  http.get(`${BASE}/modules`, async ({ request }) => {
+    const sessionId = getSessionId(request);
+    if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    return jsonResponse(mockModules);
+  }),
+
+  http.post(`${BASE}/modules`, async ({ request }) => {
+    try {
+      const body = (await request.json()) as any;
+      const sessionId = getSessionId(request);
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const newModule: Module = {
+        id: `m${Date.now()}`,
+        project_id: body.project_id || "p1",
+        name: body.name,
+        description: body.description || "",
+        progress: body.progress ?? 0,
+      };
+
+      mockModules.push(newModule);
+      saveToStorage("mockModules", mockModules);
+
+      return jsonResponse(newModule, { status: 201 });
+    } catch (e: any) {
+      console.error("MSW Error in POST /modules:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
+  }),
+
+  http.get(`${BASE}/modules/:id`, async ({ request, params }) => {
+    const sessionId = getSessionId(request);
+    if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    const moduleItem = mockModules.find(m => m.id === params.id);
+    if (!moduleItem) return jsonResponse({ error: "Module not found" }, { status: 404 });
+    return jsonResponse(moduleItem);
+  }),
+
+  http.patch(`${BASE}/modules/:id`, async ({ request, params }) => {
+    try {
+      const { id } = params;
+      const body = (await request.json()) as any;
+      const sessionId = getSessionId(request);
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const index = mockModules.findIndex((m) => m.id === id);
+      if (index === -1) return jsonResponse({ error: "Module not found" }, { status: 404 });
+
+      mockModules[index] = {
+        ...mockModules[index],
+        ...body,
+      };
+      saveToStorage("mockModules", mockModules);
+
+      return jsonResponse(mockModules[index]);
+    } catch (e: any) {
+      console.error("MSW Error in PATCH /modules/:id:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
+  }),
+
+  http.delete(`${BASE}/modules/:id`, async ({ request, params }) => {
+    try {
+      const { id } = params;
+      const sessionId = getSessionId(request);
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const index = mockModules.findIndex((m) => m.id === id);
+      if (index === -1) return jsonResponse({ error: "Module not found" }, { status: 404 });
+
+      mockModules.splice(index, 1);
+      saveToStorage("mockModules", mockModules);
+
+      return jsonResponse({ success: true });
+    } catch (e: any) {
+      console.error("MSW Error in DELETE /modules/:id:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
+  }),
+
+  // --- CYCLES ---
+  http.get(`${BASE}/cycles`, async ({ request }) => {
+    const sessionId = getSessionId(request);
+    if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    return jsonResponse(mockCycles);
+  }),
+
+  http.post(`${BASE}/cycles`, async ({ request }) => {
+    try {
+      const body = (await request.json()) as any;
+      const sessionId = getSessionId(request);
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const newCycle = {
+        id: `c${Date.now()}`,
+        project_id: body.project_id || "p1",
+        name: body.name,
+        description: body.description || "",
+        start_date: body.start_date || "",
+        end_date: body.end_date || "",
+        progress: body.progress ?? 0,
+      };
+
+      mockCycles.push(newCycle);
+      saveToStorage("mockCycles", mockCycles);
+
+      return jsonResponse(newCycle, { status: 201 });
+    } catch (e: any) {
+      console.error("MSW Error in POST /cycles:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
+  }),
+
+  http.get(`${BASE}/cycles/:id`, async ({ request, params }) => {
+    const sessionId = getSessionId(request);
+    if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    const cycle = mockCycles.find(c => c.id === params.id);
+    if (!cycle) return jsonResponse({ error: "Cycle not found" }, { status: 404 });
+    return jsonResponse(cycle);
+  }),
+
+  http.patch(`${BASE}/cycles/:id`, async ({ request, params }) => {
+    try {
+      const { id } = params;
+      const body = (await request.json()) as any;
+      const sessionId = getSessionId(request);
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const index = mockCycles.findIndex((c) => c.id === id);
+      if (index === -1) return jsonResponse({ error: "Cycle not found" }, { status: 404 });
+
+      mockCycles[index] = {
+        ...mockCycles[index],
+        ...body,
+      };
+      saveToStorage("mockCycles", mockCycles);
+
+      return jsonResponse(mockCycles[index]);
+    } catch (e: any) {
+      console.error("MSW Error in PATCH /cycles/:id:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
+  }),
+
+  http.delete(`${BASE}/cycles/:id`, async ({ request, params }) => {
+    try {
+      const { id } = params;
+      const sessionId = getSessionId(request);
+      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const index = mockCycles.findIndex((c) => c.id === id);
+      if (index === -1) return jsonResponse({ error: "Cycle not found" }, { status: 404 });
+
+      mockCycles.splice(index, 1);
+      saveToStorage("mockCycles", mockCycles);
+
+      return jsonResponse({ success: true });
+    } catch (e: any) {
+      console.error("MSW Error in DELETE /cycles/:id:", e);
+      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    }
+  }),
+
+  // ─── CÁC ISSUES HANDLERS ───
+
+  // --- GET ALL ISSUES ---
+  http.get(`${BASE}/issues`, async ({ request }) => {
+    const sessionId = getSessionId(request);
+
+    if (!sessionId) {
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const url = new URL(request.url);
+    const projectId = url.searchParams.get("projectId") || url.searchParams.get("project_id");
+
+    const issues = projectId
+      ? mockIssues.filter((issue) => issue.project_id === projectId)
+      : mockIssues;
+
+    return jsonResponse(issues);
+  }),
+
+  // --- GET COMMENTS BY ISSUE ID ---
+  // Đưa handler này lên trước GET ISSUE BY ID để tránh xung đột định tuyến
+  http.get(`${BASE}/issues/:id/comments`, async ({ params }) => {
+    const issueId = params.id as string;
+
+    const comments = mockComments.filter(
+      (comment) => comment.issue_id === issueId
+    );
+
+    return jsonResponse(comments);
+  }),
+
+  // --- CREATE COMMENT ---
+  http.post(`${BASE}/issues/:id/comments`, async ({ request, params }) => {
+    const sessionId = getSessionId(request);
+
+    if (!sessionId) {
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const issueId = params.id as string;
+    const body = (await request.json()) as { content: string };
+
+    if (!body.content?.trim()) {
+      return jsonResponse(
+        { error: "Comment content is required" },
+        { status: 400 }
+      );
+    }
+
+    const newComment = {
+      id: `comment-${Date.now()}`,
+      issue_id: issueId,
+      user_id: sessionId,
+      content: body.content.trim(),
+      created_at: new Date().toISOString(),
+    };
+
+    mockComments.push(newComment);
+    saveToStorage("mockComments", mockComments);
+
+    return jsonResponse(newComment, { status: 201 });
+  }),
+
+  // --- GET ISSUE BY ID ---
+  http.get(`${BASE}/issues/:id`, async ({ request, params }) => {
+    const sessionId = getSessionId(request);
+
+    if (!sessionId) {
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const issue = mockIssues.find((item) => item.id === params.id);
+
+    if (!issue) {
+      return jsonResponse(
+        { error: "Issue not found" },
+        { status: 404 }
+      );
+    }
+
+    return jsonResponse(issue);
   }),
 ];

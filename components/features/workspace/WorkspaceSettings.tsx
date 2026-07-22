@@ -7,6 +7,8 @@ import { useWorkspaces } from "@/hooks/use-workspaces";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateWorkspace, deleteWorkspace } from "@/lib/services/workspace.service";
 import { useAppStore } from "@/hooks/use-app-store";
+import { toast } from "@/hooks/use-toast";
+import { confirm } from "@/hooks/use-confirm";
 
 export const WorkspaceSettings = () => {
   const params = useParams();
@@ -33,7 +35,7 @@ export const WorkspaceSettings = () => {
     mutationFn: (data: any) => updateWorkspace(workspace!.id, data),
     onSuccess: (updatedWs) => {
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
-      alert("Workspace settings updated successfully!");
+      toast.success("Workspace updated successfully.");
       // If slug changed, we need to redirect to the new URL
       if (updatedWs.slug !== slug) {
         router.push(`/${updatedWs.slug}/settings`);
@@ -41,7 +43,7 @@ export const WorkspaceSettings = () => {
     },
     onError: (error) => {
       console.error("Failed to update workspace:", error);
-      alert("Failed to update workspace settings.");
+      toast.error("Failed to update workspace settings.");
     }
   });
 
@@ -49,6 +51,7 @@ export const WorkspaceSettings = () => {
     mutationFn: () => deleteWorkspace(workspace!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+      toast.success("Workspace deleted successfully.");
       const remainingWorkspaces = workspaces?.filter(w => w.id !== workspace!.id) || [];
       if (remainingWorkspaces.length > 0) {
         router.push(`/${remainingWorkspaces[0].slug}`);
@@ -58,7 +61,7 @@ export const WorkspaceSettings = () => {
     },
     onError: (error) => {
       console.error("Failed to delete workspace:", error);
-      alert("Failed to delete workspace.");
+      toast.error("Failed to delete workspace.");
     }
   });
 
@@ -67,9 +70,16 @@ export const WorkspaceSettings = () => {
     handleUpdateWorkspace({ name, slug: workspaceSlug });
   };
 
-  const onDelete = () => {
+  const onDelete = async () => {
     if (!workspace) return;
-    if (confirm("Are you sure you want to delete this workspace? This action cannot be undone.")) {
+    const ok = await confirm({
+      title: "Delete Workspace",
+      description: "The workspace will be permanently deleted, including its projects, issues, and settings. This action is irreversible.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "danger",
+    });
+    if (ok) {
       handleDeleteWorkspace();
     }
   };
