@@ -13,6 +13,7 @@ export interface Workspace {
   name: string;
   slug: string; // Tên viết liền không dấu, vd: "fpt-software"
   owner_id: string;
+  logo?: string; // Emoji hoặc URL logo workspace
 }
 
 export interface Project {
@@ -113,7 +114,7 @@ if (needsMigration && isBrowser) saveToStorage('mockUsers', defaultUsers);
 
 // Bảng Workspaces
 const defaultWorkspaces: Workspace[] = [
-  { id: 'w1', name: 'OJT Team Frontend', slug: 'ojt-team-fe', owner_id: 'u1' }
+  { id: 'w1', name: 'OJT Team Frontend', slug: 'ojt-team-fe', owner_id: 'u1', logo: '🚀' }
 ];
 
 let storedWorkspaces = loadFromStorage<Workspace[]>('mockWorkspaces', defaultWorkspaces);

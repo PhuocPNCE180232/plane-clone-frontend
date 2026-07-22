@@ -2,12 +2,13 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { LogOut, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import Image from "next/image";
 
 export function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { user, logout } = useAuth();
@@ -27,8 +28,13 @@ export function UserDropdown() {
   }, []);
 
   const handleLogout = async () => {
-    await logout();
-    router.push("/sign-in");
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      router.push("/sign-in");
+    } catch {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -77,10 +83,15 @@ export function UserDropdown() {
           </div>
           <button
             onClick={handleLogout}
-            className="flex w-full items-center px-4 py-2 text-sm text-red-600 dark:text-red-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+            disabled={isLoggingOut}
+            className="flex w-full items-center px-4 py-2 text-sm text-red-600 dark:text-red-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors disabled:opacity-60"
           >
-            <LogOut className="mr-2 h-4 w-4" />
-            Log out
+            {isLoggingOut ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <LogOut className="mr-2 h-4 w-4" />
+            )}
+            {isLoggingOut ? "Đang đăng xuất..." : "Log out"}
           </button>
         </div>
       )}

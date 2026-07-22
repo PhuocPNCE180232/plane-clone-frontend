@@ -157,6 +157,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
         name: body.name,
         slug: body.slug,
         owner_id: sessionId,
+        logo: body.logo || '',
       };
       mockWorkspaces.push(newWorkspace);
       saveToStorage("mockWorkspaces", mockWorkspaces);
