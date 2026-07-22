@@ -26,12 +26,79 @@ import {
 
 export const BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
 
+// TYPE / INTERFACE
+
+interface LoginPayload {
+  email?: string;
+  password?: string;
+}
+
+interface SignupPayload {
+  email: string;
+  name?: string;
+  password?: string;
+}
+
+interface WorkspacePayload {
+  name: string;
+  slug: string;
+  logo?: string;
+}
+
+interface ProjectPayload {
+  workspaceId?: string;
+  name: string;
+  identifier: string;
+  description?: string;
+  network?: string;
+}
+
+interface ModulePayload {
+  project_id?: string;
+  name: string;
+  description?: string;
+  progress?: number;
+}
+
+interface CyclePayload {
+  project_id?: string;
+  name: string;
+  description?: string;
+  start_date?: string;
+  end_date?: string;
+  progress?: number;
+}
+
+interface IssuePayload {
+  project_id?: string;
+  workspace_id?: string;
+  name: string;
+  description?: string;
+  state?: string;
+  priority?: string;
+  assignees?: string[];
+}
+
+interface CommentPayload {
+  content: string;
+}
+
 // Helper to wrap all JSON responses with CORS headers
-function jsonResponse(body: any, init?: ResponseInit) {
+function jsonResponse(body: unknown, init?: ResponseInit) {
   const headers = new Headers(init?.headers);
   headers.set("Access-Control-Allow-Origin", "http://localhost:3000");
   headers.set("Access-Control-Allow-Credentials", "true");
   return HttpResponse.json(body, { ...init, headers });
+}
+
+// Helper to handle errors safely without 'any'
+function handleError(e: unknown, context: string) {
+  const err = e instanceof Error ? e : new Error(String(e));
+  console.error(`MSW Error in ${context}:`, err);
+  return jsonResponse(
+    { error: err.message, stack: err.stack },
+    { status: 500 },
+  );
 }
 
 export { http, HttpResponse };
@@ -61,7 +128,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
 
   // --- AUTH ---
   http.post(`${BASE}/auth/login`, async ({ request }) => {
-    const body = (await request.json()) as any;
+    const body = (await request.json()) as LoginPayload;
     const { email, password } = body;
 
     const user = mockUsers.find((u) => u.email === email);
@@ -69,20 +136,22 @@ export const handlers: ReturnType<typeof http.all>[] = [
       return jsonResponse({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    // Verify password if the user has one set
     if (user.password && user.password !== password) {
       return jsonResponse({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    return jsonResponse({ user, token: "mock_token_" + user.id }, {
-      headers: {
-        "Set-Cookie": `plane_session=${user.id}; Path=/; HttpOnly`,
+    return jsonResponse(
+      { user, token: "mock_token_" + user.id },
+      {
+        headers: {
+          "Set-Cookie": `plane_session=${user.id}; Path=/; HttpOnly`,
+        },
       },
-    });
+    );
   }),
 
   http.post(`${BASE}/auth/signup`, async ({ request }) => {
-    const body = (await request.json()) as any;
+    const body = (await request.json()) as SignupPayload;
     const { email, name, password } = body;
 
     const existing = mockUsers.find((u) => u.email === email);
@@ -100,11 +169,14 @@ export const handlers: ReturnType<typeof http.all>[] = [
     mockUsers.push(newUser);
     saveToStorage("mockUsers", mockUsers);
 
-    return jsonResponse({ user: newUser, token: "mock_token_" + newUser.id }, {
-      headers: {
-        "Set-Cookie": `plane_session=${newUser.id}; Path=/; HttpOnly`,
+    return jsonResponse(
+      { user: newUser, token: "mock_token_" + newUser.id },
+      {
+        headers: {
+          "Set-Cookie": `plane_session=${newUser.id}; Path=/; HttpOnly`,
+        },
       },
-    });
+    );
   }),
 
   http.get(`${BASE}/users/me`, async ({ request }) => {
@@ -123,33 +195,40 @@ export const handlers: ReturnType<typeof http.all>[] = [
   }),
 
   http.post(`${BASE}/auth/logout`, async () => {
-    return jsonResponse({ success: true }, {
-      headers: {
-        "Set-Cookie": `plane_session=; Path=/; HttpOnly; Max-Age=0`,
+    return jsonResponse(
+      { success: true },
+      {
+        headers: {
+          "Set-Cookie": `plane_session=; Path=/; HttpOnly; Max-Age=0`,
+        },
       },
-    });
+    );
   }),
 
   // --- ONBOARDING (WORKSPACES & PROJECTS) ---
   http.get(`${BASE}/workspaces`, async ({ request }) => {
     const sessionId = getSessionId(request);
 
-    if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    if (!sessionId)
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
-    // For development, return all workspaces since we haven't implemented members yet.
     return jsonResponse(mockWorkspaces);
   }),
 
   http.post(`${BASE}/workspaces`, async ({ request }) => {
     try {
-      const body = (await request.json()) as any;
+      const body = (await request.json()) as WorkspacePayload;
       const sessionId = getSessionId(request);
 
-      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
-      const existing = mockWorkspaces.find(w => w.slug === body.slug);
+      const existing = mockWorkspaces.find((w) => w.slug === body.slug);
       if (existing) {
-        return jsonResponse({ error: "Workspace URL is already taken" }, { status: 400 });
+        return jsonResponse(
+          { error: "Workspace URL is already taken" },
+          { status: 400 },
+        );
       }
 
       const newWorkspace: Workspace = {
@@ -157,15 +236,14 @@ export const handlers: ReturnType<typeof http.all>[] = [
         name: body.name,
         slug: body.slug,
         owner_id: sessionId,
-        logo: body.logo || '',
+        logo: body.logo || "",
       };
       mockWorkspaces.push(newWorkspace);
       saveToStorage("mockWorkspaces", mockWorkspaces);
 
       return jsonResponse(newWorkspace, { status: 201 });
-    } catch (e: any) {
-      console.error("MSW Error in POST /workspaces:", e);
-      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    } catch (e: unknown) {
+      return handleError(e, "POST /workspaces");
     }
   }),
 
@@ -173,19 +251,20 @@ export const handlers: ReturnType<typeof http.all>[] = [
     try {
       const { id } = params;
       const sessionId = getSessionId(request);
-      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
-      const body = (await request.json()) as any;
-      const index = mockWorkspaces.findIndex(w => w.id === id);
-      if (index === -1) return jsonResponse({ error: "Workspace not found" }, { status: 404 });
+      const body = (await request.json()) as Partial<WorkspacePayload>;
+      const index = mockWorkspaces.findIndex((w) => w.id === id);
+      if (index === -1)
+        return jsonResponse({ error: "Workspace not found" }, { status: 404 });
 
       mockWorkspaces[index] = { ...mockWorkspaces[index], ...body };
       saveToStorage("mockWorkspaces", mockWorkspaces);
 
       return jsonResponse(mockWorkspaces[index]);
-    } catch (e: any) {
-      console.error("MSW Error in PATCH /workspaces:", e);
-      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    } catch (e: unknown) {
+      return handleError(e, "PATCH /workspaces");
     }
   }),
 
@@ -193,37 +272,38 @@ export const handlers: ReturnType<typeof http.all>[] = [
     try {
       const { id } = params;
       const sessionId = getSessionId(request);
-      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
-      const index = mockWorkspaces.findIndex(w => w.id === id);
-      if (index === -1) return jsonResponse({ error: "Workspace not found" }, { status: 404 });
+      const index = mockWorkspaces.findIndex((w) => w.id === id);
+      if (index === -1)
+        return jsonResponse({ error: "Workspace not found" }, { status: 404 });
 
       mockWorkspaces.splice(index, 1);
       saveToStorage("mockWorkspaces", mockWorkspaces);
 
       return jsonResponse({ success: true });
-    } catch (e: any) {
-      console.error("MSW Error in DELETE /workspaces:", e);
-      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    } catch (e: unknown) {
+      return handleError(e, "DELETE /workspaces");
     }
   }),
 
   http.get(`${BASE}/projects`, async ({ request }) => {
     const sessionId = getSessionId(request);
 
-    if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    if (!sessionId)
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
-    // The user can fetch all projects in the workspace. Since we don't have workspace validation yet, we just return all mock projects.
-    // In a real app, it would filter by workspaceId. Let's return all projects.
     return jsonResponse(mockProjects);
   }),
 
   http.post(`${BASE}/projects`, async ({ request }) => {
     try {
-      const body = (await request.json()) as any;
+      const body = (await request.json()) as ProjectPayload;
       const sessionId = getSessionId(request);
 
-      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
       const newProject: Project = {
         id: `p${Date.now()}`,
@@ -239,9 +319,8 @@ export const handlers: ReturnType<typeof http.all>[] = [
       saveToStorage("mockProjects", mockProjects);
 
       return jsonResponse(newProject, { status: 201 });
-    } catch (e: any) {
-      console.error("MSW Error in POST /projects:", e);
-      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    } catch (e: unknown) {
+      return handleError(e, "POST /projects");
     }
   }),
 
@@ -249,19 +328,20 @@ export const handlers: ReturnType<typeof http.all>[] = [
     try {
       const { id } = params;
       const sessionId = getSessionId(request);
-      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
-      const body = (await request.json()) as any;
-      const index = mockProjects.findIndex(p => p.id === id);
-      if (index === -1) return jsonResponse({ error: "Project not found" }, { status: 404 });
+      const body = (await request.json()) as Partial<ProjectPayload>;
+      const index = mockProjects.findIndex((p) => p.id === id);
+      if (index === -1)
+        return jsonResponse({ error: "Project not found" }, { status: 404 });
 
       mockProjects[index] = { ...mockProjects[index], ...body };
       saveToStorage("mockProjects", mockProjects);
 
       return jsonResponse(mockProjects[index]);
-    } catch (e: any) {
-      console.error("MSW Error in PATCH /projects:", e);
-      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    } catch (e: unknown) {
+      return handleError(e, "PATCH /projects");
     }
   }),
 
@@ -269,33 +349,36 @@ export const handlers: ReturnType<typeof http.all>[] = [
     try {
       const { id } = params;
       const sessionId = getSessionId(request);
-      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
-      const index = mockProjects.findIndex(p => p.id === id);
-      if (index === -1) return jsonResponse({ error: "Project not found" }, { status: 404 });
+      const index = mockProjects.findIndex((p) => p.id === id);
+      if (index === -1)
+        return jsonResponse({ error: "Project not found" }, { status: 404 });
 
       mockProjects.splice(index, 1);
       saveToStorage("mockProjects", mockProjects);
 
       return jsonResponse({ success: true });
-    } catch (e: any) {
-      console.error("MSW Error in DELETE /projects:", e);
-      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    } catch (e: unknown) {
+      return handleError(e, "DELETE /projects");
     }
   }),
 
   // --- MODULES ---
   http.get(`${BASE}/modules`, async ({ request }) => {
     const sessionId = getSessionId(request);
-    if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    if (!sessionId)
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
     return jsonResponse(mockModules);
   }),
 
   http.post(`${BASE}/modules`, async ({ request }) => {
     try {
-      const body = (await request.json()) as any;
+      const body = (await request.json()) as ModulePayload;
       const sessionId = getSessionId(request);
-      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
       const newModule: Module = {
         id: `m${Date.now()}`,
@@ -309,29 +392,32 @@ export const handlers: ReturnType<typeof http.all>[] = [
       saveToStorage("mockModules", mockModules);
 
       return jsonResponse(newModule, { status: 201 });
-    } catch (e: any) {
-      console.error("MSW Error in POST /modules:", e);
-      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    } catch (e: unknown) {
+      return handleError(e, "POST /modules");
     }
   }),
 
   http.get(`${BASE}/modules/:id`, async ({ request, params }) => {
     const sessionId = getSessionId(request);
-    if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
-    const moduleItem = mockModules.find(m => m.id === params.id);
-    if (!moduleItem) return jsonResponse({ error: "Module not found" }, { status: 404 });
+    if (!sessionId)
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    const moduleItem = mockModules.find((m) => m.id === params.id);
+    if (!moduleItem)
+      return jsonResponse({ error: "Module not found" }, { status: 404 });
     return jsonResponse(moduleItem);
   }),
 
   http.patch(`${BASE}/modules/:id`, async ({ request, params }) => {
     try {
       const { id } = params;
-      const body = (await request.json()) as any;
+      const body = (await request.json()) as Partial<ModulePayload>;
       const sessionId = getSessionId(request);
-      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
       const index = mockModules.findIndex((m) => m.id === id);
-      if (index === -1) return jsonResponse({ error: "Module not found" }, { status: 404 });
+      if (index === -1)
+        return jsonResponse({ error: "Module not found" }, { status: 404 });
 
       mockModules[index] = {
         ...mockModules[index],
@@ -340,9 +426,8 @@ export const handlers: ReturnType<typeof http.all>[] = [
       saveToStorage("mockModules", mockModules);
 
       return jsonResponse(mockModules[index]);
-    } catch (e: any) {
-      console.error("MSW Error in PATCH /modules/:id:", e);
-      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    } catch (e: unknown) {
+      return handleError(e, "PATCH /modules");
     }
   }),
 
@@ -350,33 +435,36 @@ export const handlers: ReturnType<typeof http.all>[] = [
     try {
       const { id } = params;
       const sessionId = getSessionId(request);
-      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
       const index = mockModules.findIndex((m) => m.id === id);
-      if (index === -1) return jsonResponse({ error: "Module not found" }, { status: 404 });
+      if (index === -1)
+        return jsonResponse({ error: "Module not found" }, { status: 404 });
 
       mockModules.splice(index, 1);
       saveToStorage("mockModules", mockModules);
 
       return jsonResponse({ success: true });
-    } catch (e: any) {
-      console.error("MSW Error in DELETE /modules/:id:", e);
-      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    } catch (e: unknown) {
+      return handleError(e, "DELETE /modules");
     }
   }),
 
   // --- CYCLES ---
   http.get(`${BASE}/cycles`, async ({ request }) => {
     const sessionId = getSessionId(request);
-    if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    if (!sessionId)
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
     return jsonResponse(mockCycles);
   }),
 
   http.post(`${BASE}/cycles`, async ({ request }) => {
     try {
-      const body = (await request.json()) as any;
+      const body = (await request.json()) as CyclePayload;
       const sessionId = getSessionId(request);
-      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
       const newCycle = {
         id: `c${Date.now()}`,
@@ -392,29 +480,32 @@ export const handlers: ReturnType<typeof http.all>[] = [
       saveToStorage("mockCycles", mockCycles);
 
       return jsonResponse(newCycle, { status: 201 });
-    } catch (e: any) {
-      console.error("MSW Error in POST /cycles:", e);
-      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    } catch (e: unknown) {
+      return handleError(e, "POST /cycles");
     }
   }),
 
   http.get(`${BASE}/cycles/:id`, async ({ request, params }) => {
     const sessionId = getSessionId(request);
-    if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
-    const cycle = mockCycles.find(c => c.id === params.id);
-    if (!cycle) return jsonResponse({ error: "Cycle not found" }, { status: 404 });
+    if (!sessionId)
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    const cycle = mockCycles.find((c) => c.id === params.id);
+    if (!cycle)
+      return jsonResponse({ error: "Cycle not found" }, { status: 404 });
     return jsonResponse(cycle);
   }),
 
   http.patch(`${BASE}/cycles/:id`, async ({ request, params }) => {
     try {
       const { id } = params;
-      const body = (await request.json()) as any;
+      const body = (await request.json()) as Partial<CyclePayload>;
       const sessionId = getSessionId(request);
-      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
       const index = mockCycles.findIndex((c) => c.id === id);
-      if (index === -1) return jsonResponse({ error: "Cycle not found" }, { status: 404 });
+      if (index === -1)
+        return jsonResponse({ error: "Cycle not found" }, { status: 404 });
 
       mockCycles[index] = {
         ...mockCycles[index],
@@ -423,9 +514,8 @@ export const handlers: ReturnType<typeof http.all>[] = [
       saveToStorage("mockCycles", mockCycles);
 
       return jsonResponse(mockCycles[index]);
-    } catch (e: any) {
-      console.error("MSW Error in PATCH /cycles/:id:", e);
-      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    } catch (e: unknown) {
+      return handleError(e, "PATCH /cycles");
     }
   }),
 
@@ -433,22 +523,104 @@ export const handlers: ReturnType<typeof http.all>[] = [
     try {
       const { id } = params;
       const sessionId = getSessionId(request);
-      if (!sessionId) return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
       const index = mockCycles.findIndex((c) => c.id === id);
-      if (index === -1) return jsonResponse({ error: "Cycle not found" }, { status: 404 });
+      if (index === -1)
+        return jsonResponse({ error: "Cycle not found" }, { status: 404 });
 
       mockCycles.splice(index, 1);
       saveToStorage("mockCycles", mockCycles);
 
       return jsonResponse({ success: true });
-    } catch (e: any) {
-      console.error("MSW Error in DELETE /cycles/:id:", e);
-      return jsonResponse({ error: String(e), stack: e.stack }, { status: 500 });
+    } catch (e: unknown) {
+      return handleError(e, "DELETE /cycles");
     }
   }),
 
   // ─── CÁC ISSUES HANDLERS ───
+
+  // --- CREATE ISSUE (POST) ---
+  http.post(`${BASE}/issues`, async ({ request }) => {
+    try {
+      const body = (await request.json()) as IssuePayload;
+      const sessionId = getSessionId(request);
+
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const newIssue = {
+        id: `issue-${Date.now()}`,
+        project_id: body.project_id || "p1",
+        workspace_id: body.workspace_id || "w1",
+        name: body.name,
+        description: body.description || "",
+        state: body.state || "todo",
+        priority: body.priority || "none",
+        assignees: body.assignees || [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      mockIssues.push(newIssue);
+      saveToStorage("mockIssues", mockIssues);
+
+      return jsonResponse(newIssue, { status: 201 });
+    } catch (e: unknown) {
+      return handleError(e, "POST /issues");
+    }
+  }),
+
+  // --- UPDATE ISSUE (PATCH) ---
+  http.patch(`${BASE}/issues/:id`, async ({ request, params }) => {
+    try {
+      const { id } = params;
+      const body = (await request.json()) as Partial<IssuePayload>;
+      const sessionId = getSessionId(request);
+
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const index = mockIssues.findIndex((i) => i.id === id);
+      if (index === -1)
+        return jsonResponse({ error: "Issue not found" }, { status: 404 });
+
+      mockIssues[index] = {
+        ...mockIssues[index],
+        ...body,
+        updated_at: new Date().toISOString(),
+      };
+
+      saveToStorage("mockIssues", mockIssues);
+
+      return jsonResponse(mockIssues[index]);
+    } catch (e: unknown) {
+      return handleError(e, "PATCH /issues");
+    }
+  }),
+
+  // --- DELETE ISSUE (DELETE) ---
+  http.delete(`${BASE}/issues/:id`, async ({ request, params }) => {
+    try {
+      const { id } = params;
+      const sessionId = getSessionId(request);
+
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const index = mockIssues.findIndex((i) => i.id === id);
+      if (index === -1)
+        return jsonResponse({ error: "Issue not found" }, { status: 404 });
+
+      mockIssues.splice(index, 1);
+      saveToStorage("mockIssues", mockIssues);
+
+      return jsonResponse({ success: true });
+    } catch (e: unknown) {
+      return handleError(e, "DELETE /issues");
+    }
+  }),
 
   // --- GET ALL ISSUES ---
   http.get(`${BASE}/issues`, async ({ request }) => {
@@ -459,7 +631,8 @@ export const handlers: ReturnType<typeof http.all>[] = [
     }
 
     const url = new URL(request.url);
-    const projectId = url.searchParams.get("projectId") || url.searchParams.get("project_id");
+    const projectId =
+      url.searchParams.get("projectId") || url.searchParams.get("project_id");
 
     const issues = projectId
       ? mockIssues.filter((issue) => issue.project_id === projectId)
@@ -469,12 +642,11 @@ export const handlers: ReturnType<typeof http.all>[] = [
   }),
 
   // --- GET COMMENTS BY ISSUE ID ---
-  // Đưa handler này lên trước GET ISSUE BY ID để tránh xung đột định tuyến
   http.get(`${BASE}/issues/:id/comments`, async ({ params }) => {
     const issueId = params.id as string;
 
     const comments = mockComments.filter(
-      (comment) => comment.issue_id === issueId
+      (comment) => comment.issue_id === issueId,
     );
 
     return jsonResponse(comments);
@@ -489,12 +661,12 @@ export const handlers: ReturnType<typeof http.all>[] = [
     }
 
     const issueId = params.id as string;
-    const body = (await request.json()) as { content: string };
+    const body = (await request.json()) as CommentPayload;
 
     if (!body.content?.trim()) {
       return jsonResponse(
         { error: "Comment content is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -523,10 +695,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
     const issue = mockIssues.find((item) => item.id === params.id);
 
     if (!issue) {
-      return jsonResponse(
-        { error: "Issue not found" },
-        { status: 404 }
-      );
+      return jsonResponse({ error: "Issue not found" }, { status: 404 });
     }
 
     return jsonResponse(issue);
