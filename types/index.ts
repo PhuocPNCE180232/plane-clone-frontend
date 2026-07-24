@@ -28,13 +28,27 @@ export interface Project {
 
 export interface Issue {
   id: string;
-  projectId: string;
+  project_id: string;
   title: string;
-  description?: string;
-  state: 'backlog' | 'unstarted' | 'started' | 'completed' | 'cancelled';
-  priority: 'urgent' | 'high' | 'medium' | 'low' | 'none';
-  assigneeId?: string | null;
-  startDate?: string | null;
-  dueDate?: string | null;
-  createdAt: string;
+  description: string;
+
+  state:
+    | "Backlog"
+    | "Todo"
+    | "In Progress"
+    | "Done"
+    | "Cancelled";
+
+  priority:
+    | "Urgent"
+    | "High"
+    | "Medium"
+    | "Low"
+    | "None";
+
+  assignee_id: string | null;
+  module_id: string | null;
+  cycle_id: string | null;
+
+  created_at: string;
 }

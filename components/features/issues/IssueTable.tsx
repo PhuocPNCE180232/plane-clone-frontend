@@ -10,10 +10,14 @@ import { IssueRow } from "./IssueRow";
 
 interface IssueTableProps {
   projectId: string;
+  reloadKey: number;
+  onDelete?: (id: string) => void;
 }
 
 export const IssueTable = ({
   projectId,
+  reloadKey,
+  onDelete,
 }: IssueTableProps) => {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,7 +48,7 @@ export const IssueTable = ({
     };
 
     loadIssues();
-  }, [projectId]);
+  }, [projectId, reloadKey]);
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -136,6 +140,7 @@ export const IssueTable = ({
           <IssueRow
             key={issue.id}
             issue={issue}
+            onDelete={onDelete}
           />
         ))}
     </div>

@@ -1,3 +1,8 @@
+"use client";
+
+import { useState } from "react";
+import { IssueForm } from "./IssueForm";
+
 import {
   List,
   LayoutGrid,
@@ -43,68 +48,85 @@ const Divider = () => (
 
 // ─── IssueToolbar ────────────────────────────────────────────────────────────
 
-export const IssueToolbar = () => {
+interface IssueToolbarProps {
+  onCreated: () => void;
+}
+
+export const IssueToolbar = ({
+  onCreated,
+}: IssueToolbarProps) => {
+  const [open, setOpen] = useState(false);
+
   return (
-    <div className="mb-4 flex items-center justify-between border-b border-gray-200 pb-3">
+    <>
+      <div className="mb-4 flex items-center justify-between border-b border-gray-200 pb-3">
+        {/* Left group: view switcher */}
+        <div className="flex items-center gap-0.5">
+          <ToolbarBtn
+            icon={<List className="h-3.5 w-3.5" />}
+            label="List"
+            active={true}
+          />
+          <ToolbarBtn
+            icon={<LayoutGrid className="h-3.5 w-3.5" />}
+            label="Board"
+          />
+          <ToolbarBtn
+            icon={<CalendarDays className="h-3.5 w-3.5" />}
+            label="Calendar"
+          />
 
-      {/* Left group: view switcher */}
-      <div className="flex items-center gap-0.5">
-        <ToolbarBtn
-          icon={<List className="h-3.5 w-3.5" />}
-          label="List"
-          active={true}
-        />
-        <ToolbarBtn
-          icon={<LayoutGrid className="h-3.5 w-3.5" />}
-          label="Board"
-        />
-        <ToolbarBtn
-          icon={<CalendarDays className="h-3.5 w-3.5" />}
-          label="Calendar"
-        />
+          <Divider />
 
-        <Divider />
+          <ToolbarBtn
+            icon={<BarChart2 className="h-3.5 w-3.5" />}
+            label="Analytics"
+          />
+          <ToolbarBtn
+            icon={<SlidersHorizontal className="h-3.5 w-3.5" />}
+            label="Display"
+          />
+        </div>
 
-        <ToolbarBtn
-          icon={<BarChart2 className="h-3.5 w-3.5" />}
-          label="Analytics"
-        />
-        <ToolbarBtn
-          icon={<SlidersHorizontal className="h-3.5 w-3.5" />}
-          label="Display"
-        />
+        {/* Right group: filter + add */}
+        <div className="flex items-center gap-2">
+          <button
+            className="
+              flex items-center gap-1.5
+              rounded-md border border-gray-300 bg-white
+              px-3 py-1.5
+              text-xs font-medium text-gray-600
+              hover:bg-gray-50 hover:border-gray-400
+              transition-colors
+            "
+          >
+            <ListFilter className="h-3.5 w-3.5" />
+            Filters
+          </button>
+
+          <button
+            onClick={() => setOpen(true)}
+            className="
+              flex items-center gap-1.5
+              rounded-md bg-[#3f76ff]
+              px-3 py-1.5
+              text-xs font-medium text-white
+              hover:bg-[#2d63e8]
+              transition-colors
+            "
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Work Item
+          </button>
+        </div>
       </div>
 
-      {/* Right group: filter + add */}
-      <div className="flex items-center gap-2">
-        <button
-          className="
-            flex items-center gap-1.5
-            rounded-md border border-gray-300 bg-white
-            px-3 py-1.5
-            text-xs font-medium text-gray-600
-            hover:bg-gray-50 hover:border-gray-400
-            transition-colors
-          "
-        >
-          <ListFilter className="h-3.5 w-3.5" />
-          Filters
-        </button>
-
-        <button
-          className="
-            flex items-center gap-1.5
-            rounded-md bg-[#3f76ff]
-            px-3 py-1.5
-            text-xs font-medium text-white
-            hover:bg-[#2d63e8]
-            transition-colors
-          "
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Add Work Item
-        </button>
-      </div>
-    </div>
+      {open && (
+        <IssueForm
+          onClose={() => setOpen(false)}
+          onCreated={onCreated}
+        />
+      )}
+    </>
   );
 };

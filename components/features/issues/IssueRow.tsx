@@ -9,11 +9,12 @@ import { IssuePriorityBadge } from "./IssuePriorityBadge";
 
 type IssueRowProps = {
   issue: Issue;
+  onDelete?: (id: string) => void;
 };
 
 const LABEL_PLACEHOLDER = "UI";
 
-export const IssueRow = ({ issue }: IssueRowProps) => {
+export const IssueRow = ({ issue, onDelete }: IssueRowProps) => {
   const router = useRouter();
 
   const params = useParams<{
@@ -126,6 +127,27 @@ export const IssueRow = ({ issue }: IssueRowProps) => {
           </div>
         )}
       </div>
+
+      {/* Delete button */}
+      <button
+        type="button"
+        className="
+          shrink-0 rounded px-1.5 py-0.5
+          text-xs font-bold text-red-400
+          opacity-0
+          transition-all
+          group-hover:opacity-100
+          hover:bg-red-50
+          hover:text-red-600
+        "
+        aria-label="Delete issue"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete?.(issue.id);
+        }}
+      >
+        -
+      </button>
 
       {/* More menu */}
       <button
