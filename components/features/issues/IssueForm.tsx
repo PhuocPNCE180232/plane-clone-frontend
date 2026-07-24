@@ -1,4 +1,5 @@
 "use client";
+
 import { toast } from "sonner";
 import { useState } from "react";
 import { createIssue } from "@/lib/services/issue.service";
@@ -18,15 +19,10 @@ export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
     try {
       await createIssue({
         project_id: "p1",
-
         title,
-
         description,
-
         state,
-
         priority,
-
         assignee_id: null,
         module_id: null,
         cycle_id: null,
@@ -36,7 +32,8 @@ export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
 
       onCreated();
       onClose();
-    } catch (error) {toast.error("Failed to create issue!");
+    } catch (error) {
+      toast.error("Failed to create issue!");
       console.error(error);
     }
   };
@@ -49,7 +46,6 @@ export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
         </h2>
 
         <div className="space-y-4">
-
           <div>
             <label className="mb-1 block text-sm font-medium">
               Title
@@ -127,7 +123,6 @@ export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
               Create
             </button>
           </div>
-
         </div>
       </div>
     </div>

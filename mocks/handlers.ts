@@ -589,9 +589,11 @@ export const handlers: ReturnType<typeof http.all>[] = [
       };
 
       mockIssues.push(newIssue);
-      saveToStorage("mockIssues", mockIssues);
-
-      return jsonResponse(newIssue, { status: 201 });
+      saveToStorage("mockIssues", [...mockIssues]);
+      return jsonResponse(
+        JSON.parse(JSON.stringify(newIssue)),
+        { status: 201 }
+      );
     } catch (e: unknown) {
       return handleError(e, "POST /issues");
     }
@@ -614,12 +616,11 @@ export const handlers: ReturnType<typeof http.all>[] = [
       mockIssues[index] = {
         ...mockIssues[index],
         ...body,
-        updated_at: new Date().toISOString(),
       };
-
-      saveToStorage("mockIssues", mockIssues);
-
-      return jsonResponse(mockIssues[index]);
+      saveToStorage("mockIssues", [...mockIssues]);
+      return jsonResponse(
+        JSON.parse(JSON.stringify(mockIssues[index]))
+      );
     } catch (e: unknown) {
       return handleError(e, "PATCH /issues");
     }
@@ -639,9 +640,10 @@ export const handlers: ReturnType<typeof http.all>[] = [
         return jsonResponse({ error: "Issue not found" }, { status: 404 });
 
       mockIssues.splice(index, 1);
-      saveToStorage("mockIssues", mockIssues);
-
-      return jsonResponse({ success: true });
+      saveToStorage("mockIssues", [...mockIssues]);
+      return jsonResponse(
+        JSON.parse(JSON.stringify({ success: true }))
+      );
     } catch (e: unknown) {
       return handleError(e, "DELETE /issues");
     }
@@ -663,7 +665,9 @@ export const handlers: ReturnType<typeof http.all>[] = [
       ? mockIssues.filter((issue) => issue.project_id === projectId)
       : mockIssues;
 
-    return jsonResponse(issues);
+    return jsonResponse(
+      JSON.parse(JSON.stringify(issues))
+    );
   }),
 
   // --- GET COMMENTS BY ISSUE ID ---
