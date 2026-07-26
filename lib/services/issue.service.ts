@@ -12,12 +12,8 @@
  *   DELETE /issues/:id          → void
  *
  * NOTE ON TYPES
- * The shared Issue type in types/index.ts uses camelCase (projectId,
- * assigneeId, createdAt) while mocks/db.ts uses snake_case (project_id,
- * assignee_id, created_at). The service types here follow types/index.ts
- * because that is the shared contract for the frontend. The backend team
- * must confirm whether their JSON responses use camelCase or snake_case,
- * and a transformer/interceptor may be needed if they differ.
+ * Both types/index.ts and mocks/db.ts use snake_case (project_id,
+ * assignee_id, created_at, module_id, cycle_id) as agreed upon by the team.
  */
 
 import { get, post, patch, del } from "@/lib/api/request";
@@ -26,20 +22,26 @@ import type { Comment } from "@/mocks/db";
 // ─── DTO types ─────────────────────────────────────────────────────────────
 
 /**
- * Fields sent when creating a new issue.
- * Omit server-generated fields: id, createdAt.
+ * Fields sent when creating a new issue using snake_case.
  */
-export type CreateIssueDto = Omit<Issue, "id" | "createdAt">;
+export interface CreateIssuePayload {
+  project_id: string;
+  title: string;
+  description: string;
+  state: string;
+  priority: string;
+  assignee_id: string | null;
+}
 
 /** All fields are optional on update (partial edit). */
-export type UpdateIssueDto = Partial<CreateIssueDto>;
+export type UpdateIssueDto = Partial<CreateIssuePayload>;
 
 // ─── Service functions ─────────────────────────────────────────────────────
 
 /** Returns all issues the current user can access. */
-export const getIssues = (projectId?: string): Promise<Issue[]> =>
+export const getIssues = (project_id?: string): Promise<Issue[]> =>
   get<Issue[]>(
-    projectId ? `/issues?projectId=${projectId}` : "/issues"
+    project_id ? `/issues?project_id=${project_id}` : "/issues"
   );
 
 /** Returns a single issue by its ID. */
@@ -47,8 +49,8 @@ export const getIssueById = (id: string): Promise<Issue> =>
   get<Issue>(`/issues/${id}`);
 
 /** Creates a new issue and returns the created resource. */
-export const createIssue = (data: CreateIssueDto): Promise<Issue> =>
-  post<Issue, CreateIssueDto>("/issues", data);
+export const createIssue = (data: CreateIssuePayload): Promise<Issue> =>
+  post<Issue, CreateIssuePayload>("/issues", data);
 
 /** Partially updates an issue and returns the updated resource. */
 export const updateIssue = (

@@ -1,19 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import { MoreHorizontal, CalendarDays } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { mockUsers, mockModules, mockCycles } from "@/mocks/db";
 import type { Issue } from "@/mocks/db";
 import { IssueStatusBadge } from "./IssueStatusBadge";
 import { IssuePriorityBadge } from "./IssuePriorityBadge";
+import { DeleteIssueDialog } from "./DeleteIssueDialog";
 
 type IssueRowProps = {
   issue: Issue;
+  onDelete?: (id: string) => void;
 };
 
 const LABEL_PLACEHOLDER = "UI";
 
-export const IssueRow = ({ issue }: IssueRowProps) => {
+export const IssueRow = ({ issue, onDelete }: IssueRowProps) => {
+  const [openDelete, setOpenDelete] = useState(false);
+
   const router = useRouter();
 
   const params = useParams<{
@@ -127,6 +132,26 @@ export const IssueRow = ({ issue }: IssueRowProps) => {
         )}
       </div>
 
+      {/* Delete button */}
+      <button
+        type="button"
+        className="
+          shrink-0 rounded px-1.5 py-0.5
+          text-xs font-bold text-red-400
+          opacity-0
+          transition-all
+          group-hover:opacity-100
+          hover:bg-red-50
+          hover:text-red-600
+        "
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpenDelete(true);
+        }}
+      >
+        -
+      </button>
+
       {/* More menu */}
       <button
         type="button"
@@ -148,6 +173,16 @@ export const IssueRow = ({ issue }: IssueRowProps) => {
       >
         <MoreHorizontal className="h-3.5 w-3.5" />
       </button>
+
+      <DeleteIssueDialog
+        open={openDelete}
+        issueTitle={issue.title}
+        onCancel={() => setOpenDelete(false)}
+        onConfirm={() => {
+          onDelete?.(issue.id);
+          setOpenDelete(false);
+        }}
+      />
     </div>
   );
 };

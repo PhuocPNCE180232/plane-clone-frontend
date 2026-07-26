@@ -24,6 +24,7 @@ export interface Project {
   description: string;
   createdAt?: string;
   network?: "public" | "private";
+  status?: string;
 }
 
 export interface Issue {
@@ -237,32 +238,41 @@ if (isBrowser) {
 }
 
 // Bảng Issues
-export const mockIssues: Issue[] = [
+const defaultIssues: Issue[] = [
   {
-    id: 'FE-1',
-    project_id: 'p1',
-    title: 'Bọc QueryClientProvider (TanStack Query)',
-    description: 'Setup thư viện gọi API cho toàn app',
-    state: 'Todo',
-    priority: 'High',
-    assignee_id: 'u2', // Giao cho Điền
-    module_id: 'm2',
-    cycle_id: 'c1',
-    created_at: '2026-07-03T00:00:00Z'
+    id: "FE-1",
+    project_id: "p1",
+    title: "Bọc QueryClientProvider (TanStack Query)",
+    description: "Setup thư viện gọi API cho toàn app",
+    state: "Todo",
+    priority: "High",
+    assignee_id: "u2",
+    module_id: "m2",
+    cycle_id: "c1",
+    created_at: "2026-07-03T00:00:00Z",
   },
   {
-    id: 'FE-2',
-    project_id: 'p1',
-    title: 'Dựng UI tĩnh - Form Login & Signup',
-    description: 'Dựng giao diện đăng nhập',
-    state: 'Backlog',
-    priority: 'Medium',
-    assignee_id: 'u4', // Giao cho Nhân
-    module_id: 'm1',
-    cycle_id: 'c1',
-    created_at: '2026-07-03T00:00:00Z'
-  }
+    id: "FE-2",
+    project_id: "p1",
+    title: "Dựng UI tĩnh - Form Login & Signup",
+    description: "Dựng giao diện đăng nhập",
+    state: "Backlog",
+    priority: "Medium",
+    assignee_id: "u4",
+    module_id: "m1",
+    cycle_id: "c1",
+    created_at: "2026-07-03T00:00:00Z",
+  },
 ];
+
+export let mockIssues: Issue[] = loadFromStorage(
+  "mockIssues",
+  defaultIssues
+);
+
+if (isBrowser) {
+  saveToStorage("mockIssues", mockIssues);
+}
 
 // Bảng Comments mẫu
 const defaultComments: Comment[] = [

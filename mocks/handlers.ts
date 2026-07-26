@@ -71,12 +71,13 @@ interface CyclePayload {
 
 interface IssuePayload {
   project_id?: string;
-  workspace_id?: string;
-  name: string;
+  title: string;
   description?: string;
   state?: string;
   priority?: string;
-  assignees?: string[];
+  assignee_id?: string | null;
+  module_id?: string | null;
+  cycle_id?: string | null;
 }
 
 interface CommentPayload {
@@ -539,7 +540,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
     }
   }),
 
-  // ─── CÁC ISSUES HANDLERS ───
+  // --- ISSUES HANDLERS ---
 
   // --- CREATE ISSUE (POST) ---
   http.post(`${BASE}/issues`, async ({ request }) => {
@@ -550,23 +551,49 @@ export const handlers: ReturnType<typeof http.all>[] = [
       if (!sessionId)
         return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
+      // Tìm số FE lớn nhất hiện có
+      const maxIssueNumber = Math.max(
+        0,
+        ...mockIssues
+          .map((issue) => {
+            const match = issue.id.match(/^FE-(\d+)$/);
+            return match ? Number(match[1]) : 0;
+          })
+      );
+
+      const nextIssueNumber = maxIssueNumber + 1;
+
       const newIssue = {
-        id: `issue-${Date.now()}`,
+        id: `FE-${nextIssueNumber}`,
         project_id: body.project_id || "p1",
-        workspace_id: body.workspace_id || "w1",
-        name: body.name,
-        description: body.description || "",
-        state: body.state || "todo",
-        priority: body.priority || "none",
-        assignees: body.assignees || [],
+        title: body.title,
+        description: body.description ?? "",
+        state:
+          (body.state as
+            | "Backlog"
+            | "Todo"
+            | "In Progress"
+            | "Done"
+            | "Cancelled") ?? "Todo",
+        priority:
+          (body.priority as
+            | "Urgent"
+            | "High"
+            | "Medium"
+            | "Low"
+            | "None") ?? "Low",
+        assignee_id: body.assignee_id ?? null,
+        module_id: body.module_id ?? null,
+        cycle_id: body.cycle_id ?? null,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       };
 
       mockIssues.push(newIssue);
-      saveToStorage("mockIssues", mockIssues);
-
-      return jsonResponse(newIssue, { status: 201 });
+      saveToStorage("mockIssues", [...mockIssues]);
+      return jsonResponse(
+        JSON.parse(JSON.stringify(newIssue)),
+        { status: 201 }
+      );
     } catch (e: unknown) {
       return handleError(e, "POST /issues");
     }
@@ -589,12 +616,11 @@ export const handlers: ReturnType<typeof http.all>[] = [
       mockIssues[index] = {
         ...mockIssues[index],
         ...body,
-        updated_at: new Date().toISOString(),
       };
-
-      saveToStorage("mockIssues", mockIssues);
-
-      return jsonResponse(mockIssues[index]);
+      saveToStorage("mockIssues", [...mockIssues]);
+      return jsonResponse(
+        JSON.parse(JSON.stringify(mockIssues[index]))
+      );
     } catch (e: unknown) {
       return handleError(e, "PATCH /issues");
     }
@@ -614,9 +640,10 @@ export const handlers: ReturnType<typeof http.all>[] = [
         return jsonResponse({ error: "Issue not found" }, { status: 404 });
 
       mockIssues.splice(index, 1);
-      saveToStorage("mockIssues", mockIssues);
-
-      return jsonResponse({ success: true });
+      saveToStorage("mockIssues", [...mockIssues]);
+      return jsonResponse(
+        JSON.parse(JSON.stringify({ success: true }))
+      );
     } catch (e: unknown) {
       return handleError(e, "DELETE /issues");
     }
@@ -638,7 +665,9 @@ export const handlers: ReturnType<typeof http.all>[] = [
       ? mockIssues.filter((issue) => issue.project_id === projectId)
       : mockIssues;
 
-    return jsonResponse(issues);
+    return jsonResponse(
+      JSON.parse(JSON.stringify(issues))
+    );
   }),
 
   // --- GET COMMENTS BY ISSUE ID ---
