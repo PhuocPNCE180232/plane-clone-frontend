@@ -17,10 +17,20 @@ import {
   mockModules,
   mockIssues,
   mockComments,
+  // --- BỔ SUNG IMPORTS CHO PHASE 2 ---
+  mockMembers,
+  mockPages,
+  mockViews,
+  mockNotifications,
   User,
   Workspace,
   Project,
   Module,
+  Member,
+  Page,
+  CustomView,
+  Notification,
+  // -----------------------------------
   saveToStorage,
 } from "./db";
 
@@ -83,6 +93,32 @@ interface IssuePayload {
 interface CommentPayload {
   content: string;
 }
+
+// --- BỔ SUNG INTERFACES CHO PHASE 2 ---
+interface UserSettingsPayload {
+  theme?: string;
+  language?: string;
+}
+
+interface MemberPayload {
+  email: string;
+  role: string;
+}
+
+interface PagePayload {
+  name: string;
+  content?: string;
+}
+
+interface ViewPayload {
+  name: string;
+  filters?: Record<string, unknown>;
+}
+
+interface InboxPayload {
+  is_read: boolean;
+}
+// ---------------------------------------
 
 // Helper to wrap all JSON responses with CORS headers
 function jsonResponse(body: unknown, init?: ResponseInit) {
@@ -554,11 +590,10 @@ export const handlers: ReturnType<typeof http.all>[] = [
       // Tìm số FE lớn nhất hiện có
       const maxIssueNumber = Math.max(
         0,
-        ...mockIssues
-          .map((issue) => {
-            const match = issue.id.match(/^FE-(\d+)$/);
-            return match ? Number(match[1]) : 0;
-          })
+        ...mockIssues.map((issue) => {
+          const match = issue.id.match(/^FE-(\d+)$/);
+          return match ? Number(match[1]) : 0;
+        }),
       );
 
       const nextIssueNumber = maxIssueNumber + 1;
@@ -576,12 +611,8 @@ export const handlers: ReturnType<typeof http.all>[] = [
             | "Done"
             | "Cancelled") ?? "Todo",
         priority:
-          (body.priority as
-            | "Urgent"
-            | "High"
-            | "Medium"
-            | "Low"
-            | "None") ?? "Low",
+          (body.priority as "Urgent" | "High" | "Medium" | "Low" | "None") ??
+          "Low",
         assignee_id: body.assignee_id ?? null,
         module_id: body.module_id ?? null,
         cycle_id: body.cycle_id ?? null,
@@ -590,10 +621,9 @@ export const handlers: ReturnType<typeof http.all>[] = [
 
       mockIssues.push(newIssue);
       saveToStorage("mockIssues", [...mockIssues]);
-      return jsonResponse(
-        JSON.parse(JSON.stringify(newIssue)),
-        { status: 201 }
-      );
+      return jsonResponse(JSON.parse(JSON.stringify(newIssue)), {
+        status: 201,
+      });
     } catch (e: unknown) {
       return handleError(e, "POST /issues");
     }
@@ -618,9 +648,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
         ...body,
       };
       saveToStorage("mockIssues", [...mockIssues]);
-      return jsonResponse(
-        JSON.parse(JSON.stringify(mockIssues[index]))
-      );
+      return jsonResponse(JSON.parse(JSON.stringify(mockIssues[index])));
     } catch (e: unknown) {
       return handleError(e, "PATCH /issues");
     }
@@ -641,9 +669,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
 
       mockIssues.splice(index, 1);
       saveToStorage("mockIssues", [...mockIssues]);
-      return jsonResponse(
-        JSON.parse(JSON.stringify({ success: true }))
-      );
+      return jsonResponse(JSON.parse(JSON.stringify({ success: true })));
     } catch (e: unknown) {
       return handleError(e, "DELETE /issues");
     }
@@ -665,9 +691,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
       ? mockIssues.filter((issue) => issue.project_id === projectId)
       : mockIssues;
 
-    return jsonResponse(
-      JSON.parse(JSON.stringify(issues))
-    );
+    return jsonResponse(JSON.parse(JSON.stringify(issues)));
   }),
 
   // --- GET COMMENTS BY ISSUE ID ---
@@ -729,4 +753,272 @@ export const handlers: ReturnType<typeof http.all>[] = [
 
     return jsonResponse(issue);
   }),
+
+  // ─── GIAI ĐOẠN 2: SETTINGS, MEMBERS, PAGES, INBOX, ANALYTICS ───
+
+  // --- ACCOUNT SETTINGS (PATCH) ---
+  http.patch(`${BASE}/users/me/settings`, async ({ request }) => {
+    try {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const body = (await request.json()) as UserSettingsPayload;
+      // Trả về data ảo báo thành công để Nhân (Frontend) làm UI
+      return jsonResponse({
+        success: true,
+        message: "Settings updated",
+        data: body,
+      });
+    } catch (e: unknown) {
+      return handleError(e, "PATCH /users/me/settings");
+    }
+  }),
+
+  // --- MEMBERS (GET, POST, DELETE) ---
+  http.get(
+    `${BASE}/workspaces/:workspace_id/members`,
+    async ({ request, params }) => {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const { workspace_id } = params;
+      const members = mockMembers.filter(
+        (m) => m.workspace_id === workspace_id,
+      );
+      return jsonResponse(members);
+    },
+  ),
+
+  http.post(
+    `${BASE}/workspaces/:workspace_id/members`,
+    async ({ request, params }) => {
+      try {
+        const sessionId = getSessionId(request);
+        if (!sessionId)
+          return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+        const { workspace_id } = params;
+        const body = (await request.json()) as MemberPayload;
+
+        const newMember: Member = {
+          id: `mem-${Date.now()}`,
+          workspace_id: workspace_id as string,
+          email: body.email,
+          role: body.role || "member",
+          joined_at: new Date().toISOString(),
+        };
+
+        mockMembers.push(newMember);
+        saveToStorage("mockMembers", mockMembers);
+        return jsonResponse(newMember, { status: 201 });
+      } catch (e: unknown) {
+        return handleError(e, "POST /members");
+      }
+    },
+  ),
+
+  http.delete(
+    `${BASE}/workspaces/:workspace_id/members/:id`,
+    async ({ request, params }) => {
+      try {
+        const { id } = params;
+        const sessionId = getSessionId(request);
+        if (!sessionId)
+          return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+        const index = mockMembers.findIndex((m) => m.id === id);
+        if (index === -1)
+          return jsonResponse({ error: "Member not found" }, { status: 404 });
+
+        mockMembers.splice(index, 1);
+        saveToStorage("mockMembers", mockMembers);
+        return jsonResponse({ success: true });
+      } catch (e: unknown) {
+        return handleError(e, "DELETE /members");
+      }
+    },
+  ),
+
+  // --- PAGES / WIKI (GET, POST, DELETE) ---
+  http.get(
+    `${BASE}/projects/:project_id/pages`,
+    async ({ request, params }) => {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const { project_id } = params;
+      const pages = mockPages.filter((p) => p.project_id === project_id);
+      return jsonResponse(pages);
+    },
+  ),
+
+  http.post(
+    `${BASE}/projects/:project_id/pages`,
+    async ({ request, params }) => {
+      try {
+        const sessionId = getSessionId(request);
+        if (!sessionId)
+          return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+        const { project_id } = params;
+        const body = (await request.json()) as PagePayload;
+
+        const newPage: Page = {
+          id: `page-${Date.now()}`,
+          project_id: project_id as string,
+          name: body.name,
+          content: body.content || "",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        mockPages.push(newPage);
+        saveToStorage("mockPages", mockPages);
+        return jsonResponse(newPage, { status: 201 });
+      } catch (e: unknown) {
+        return handleError(e, "POST /pages");
+      }
+    },
+  ),
+
+  http.delete(
+    `${BASE}/projects/:project_id/pages/:id`,
+    async ({ request, params }) => {
+      try {
+        const { id } = params;
+        const sessionId = getSessionId(request);
+        if (!sessionId)
+          return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+        const index = mockPages.findIndex((p) => p.id === id);
+        if (index === -1)
+          return jsonResponse({ error: "Page not found" }, { status: 404 });
+
+        mockPages.splice(index, 1);
+        saveToStorage("mockPages", mockPages);
+        return jsonResponse({ success: true });
+      } catch (e: unknown) {
+        return handleError(e, "DELETE /pages");
+      }
+    },
+  ),
+
+  // --- INBOX / NOTIFICATIONS (GET, PATCH) ---
+  http.get(`${BASE}/inbox`, async ({ request }) => {
+    const sessionId = getSessionId(request);
+    if (!sessionId)
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+    // Trả về noti của user hiện tại
+    const userNotifs = mockNotifications.filter((n) => n.user_id === sessionId);
+    return jsonResponse(userNotifs);
+  }),
+
+  http.patch(`${BASE}/inbox/:id`, async ({ request, params }) => {
+    try {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const { id } = params;
+      const body = (await request.json()) as InboxPayload;
+
+      const index = mockNotifications.findIndex((n) => n.id === id);
+      if (index > -1) {
+        mockNotifications[index].is_read = body.is_read;
+        saveToStorage("mockNotifications", mockNotifications);
+        return jsonResponse(mockNotifications[index]);
+      }
+      return jsonResponse({ error: "Not found" }, { status: 404 });
+    } catch (e: unknown) {
+      return handleError(e, "PATCH /inbox");
+    }
+  }),
+
+  // --- ANALYTICS (GET) ---
+  http.get(
+    `${BASE}/workspaces/:workspace_id/analytics`,
+    async ({ request }) => {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      // Fake data cho Điền vẽ biểu đồ
+      const fakeAnalytics = {
+        total_issues: mockIssues.length,
+        completed_issues: mockIssues.filter((i) => i.state === "Done").length,
+        in_progress_issues: mockIssues.filter((i) => i.state === "In Progress")
+          .length,
+        todo_issues: mockIssues.filter((i) => i.state === "Todo").length,
+      };
+      return jsonResponse(fakeAnalytics);
+    },
+  ),
+
+  // --- CUSTOM VIEWS (GET, POST, DELETE) ---
+  http.get(
+    `${BASE}/projects/:project_id/views`,
+    async ({ request, params }) => {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const { project_id } = params;
+      const views = mockViews.filter((v) => v.project_id === project_id);
+      return jsonResponse(views);
+    },
+  ),
+
+  http.post(
+    `${BASE}/projects/:project_id/views`,
+    async ({ request, params }) => {
+      try {
+        const sessionId = getSessionId(request);
+        if (!sessionId)
+          return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+        const { project_id } = params;
+        const body = (await request.json()) as ViewPayload;
+
+        const newView: CustomView = {
+          id: `view-${Date.now()}`,
+          project_id: project_id as string,
+          name: body.name,
+          filters: body.filters || {},
+          created_at: new Date().toISOString(),
+        };
+
+        mockViews.push(newView);
+        saveToStorage("mockViews", mockViews);
+        return jsonResponse(newView, { status: 201 });
+      } catch (e: unknown) {
+        return handleError(e, "POST /views");
+      }
+    },
+  ),
+
+  http.delete(
+    `${BASE}/projects/:project_id/views/:id`,
+    async ({ request, params }) => {
+      try {
+        const { id } = params;
+        const sessionId = getSessionId(request);
+        if (!sessionId)
+          return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+        const index = mockViews.findIndex((v) => v.id === id);
+        if (index === -1)
+          return jsonResponse({ error: "View not found" }, { status: 404 });
+
+        mockViews.splice(index, 1);
+        saveToStorage("mockViews", mockViews);
+        return jsonResponse({ success: true });
+      } catch (e: unknown) {
+        return handleError(e, "DELETE /views");
+      }
+    },
+  ),
 ];
