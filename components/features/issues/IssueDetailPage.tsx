@@ -7,6 +7,9 @@ import { IssueDetails } from "./IssueDetails";
 import { CommentSection } from "./CommentSection";
 
 import { getIssueById } from "@/lib/services/issue.service";
+import { getProjects } from "@/lib/services/project.service";
+import { getModules } from "@/lib/services/module.service";
+import { getCycles } from "@/lib/services/cycle.service";
 import type { Issue } from "@/types";
 
 interface IssueDetailPageProps {
@@ -17,18 +20,32 @@ export const IssueDetailPage = ({
   issueId,
 }: IssueDetailPageProps) => {
   const [issue, setIssue] = useState<Issue | null>(null);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [modules, setModules] = useState<any[]>([]);
+  const [cycles, setCycles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchIssue = async () => {
       try {
-        const data = await getIssueById(issueId);
+        const [
+          issueData,
+          projectData,
+          moduleData,
+          cycleData,
+        ] = await Promise.all([
+          getIssueById(issueId),
+          getProjects(),
+          getModules(),
+          getCycles(),
+        ]);
 
-        console.log("Issue API:", data);
-
-        setIssue(data);
+        setIssue(issueData);
+        setProjects(projectData);
+        setModules(moduleData);
+        setCycles(cycleData);
       } catch (error) {
-        console.error("Load issue failed:", error);
+        console.error(error);
       } finally {
         setLoading(false);
       }
@@ -44,6 +61,16 @@ export const IssueDetailPage = ({
       </div>
     );
   }
+
+  const project = projects.find(
+    (p) => p.id === issue?.project_id
+  );
+  const module = modules.find(
+    (m) => m.id === issue?.module_id
+  );
+  const cycle = cycles.find(
+    (c) => c.id === issue?.cycle_id
+  );
 
   return (
     <>
@@ -69,7 +96,18 @@ export const IssueDetailPage = ({
         <div className="col-span-2">
 
           {/* Truyền dữ liệu issue sang */}
-          <IssueDetails issue={issue ?? undefined} />
+          <IssueDetails
+            issue={
+              issue
+                ? {
+                    ...issue,
+                    project,
+                    module,
+                    cycle,
+                  }
+                : undefined
+            }
+          />
 
           <CommentSection issueId={issueId} />
 
