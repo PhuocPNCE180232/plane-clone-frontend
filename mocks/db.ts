@@ -1,14 +1,109 @@
-import {
-  User,
-  Workspace,
-  Project,
-  Issue,
-  Comment,
-  Cycle,
-  Module,
-} from "@/types";
+// 1. ĐỊNH NGHĨA KIỂU DỮ LIỆU
 
-// 2. CÁC HÀM TRỢ GIÚP LƯU TRỮ (STORAGE HELPERS)
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  password?: string;
+}
+
+export interface Workspace {
+  id: string;
+  name: string;
+  slug: string; 
+  owner_id: string;
+  logo?: string; 
+}
+
+export interface Project {
+  id: string;
+  workspaceId: string;
+  name: string;
+  identifier: string; 
+  description: string;
+  createdAt?: string;
+  network?: "public" | "private";
+  status?: string;
+}
+
+export interface Issue {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string;
+  state: "Backlog" | "Todo" | "In Progress" | "Done" | "Cancelled";
+  priority: "Urgent" | "High" | "Medium" | "Low" | "None";
+  assignee_id: string | null;
+  module_id: string | null;
+  cycle_id: string | null;
+  created_at: string;
+}
+
+export interface Comment {
+  id: string;
+  issue_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+}
+
+export interface Cycle {
+  id: string;
+  project_id: string;
+  name: string;
+  description?: string;
+  start_date: string;
+  end_date: string;
+  progress?: number; 
+}
+
+export interface Module {
+  id: string;
+  project_id: string;
+  name: string;
+  description: string;
+  progress?: number; 
+  start_date?: string;
+  end_date?: string;
+}
+
+// ─── THÊM KIỂU DỮ LIỆU MỚI ───
+export interface Member {
+  id: string;
+  workspace_id: string;
+  email: string;
+  role: string;
+  joined_at: string;
+}
+
+export interface Page {
+  id: string;
+  project_id: string;
+  name: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomView {
+  id: string;
+  project_id: string;
+  name: string;
+  filters: Record<string, any>;
+  created_at: string;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+// 2. CÁC HÀM TRỢ GIÚP LƯU TRỮ
 
 const isBrowser = typeof window !== "undefined";
 
@@ -35,9 +130,8 @@ export const saveToStorage = (key: string, value: any) => {
   localStorage.setItem(key, JSON.stringify(value));
 };
 
-// 3. KHỞI TẠO DỮ LIỆU MẪU (MOCK DATA)
+// 3. KHỞI TẠO DỮ LIỆU MẪU
 
-// Bảng Users (7 anh em team Plane Clone)
 const defaultUsers: User[] = [
   {
     id: "u1",
@@ -108,7 +202,7 @@ const defaultWorkspaces: Workspace[] = [
 
 let storedWorkspaces = loadFromStorage<Workspace[]>(
   "mockWorkspaces",
-  defaultWorkspaces
+  defaultWorkspaces,
 );
 
 if (isBrowser) {
@@ -166,15 +260,14 @@ const defaultProjects: Project[] = [
 
 let storedProjects = loadFromStorage<Project[]>(
   "mockProjects",
-  defaultProjects
+  defaultProjects,
 );
 
 if (storedProjects.length > 0) {
   // Fix missing fields for old mock data
   storedProjects = storedProjects.map((p) => ({
     ...p,
-    createdAt:
-      p.createdAt || new Date(Date.now() - 3600000 * 24).toISOString(),
+    createdAt: p.createdAt || new Date(Date.now() - 3600000 * 24).toISOString(),
     network: p.network || "public",
     status: p.status || "active",
   }));
@@ -275,17 +368,14 @@ const defaultIssues: Issue[] = [
   {
     id: "FE-1",
     project_id: "p1",
-    title: "Bọc QueryClientProvider",
-    description: "Setup thư viện",
+    title: "Bọc QueryClientProvider (TanStack Query)",
+    description: "Setup thư viện gọi API cho toàn app",
     state: "Todo",
     priority: "High",
     assignee_id: "u2",
     module_id: "m2",
     cycle_id: "c1",
-    labels: ["Frontend", "API"],
-    start_date: "2026-07-21",
-    due_date: "2026-07-28",
-    created_at: "2026-07-21T00:00:00Z",
+    created_at: "2026-07-03T00:00:00Z",
   },
   {
     id: "FE-2",
@@ -297,17 +387,11 @@ const defaultIssues: Issue[] = [
     assignee_id: "u4",
     module_id: "m1",
     cycle_id: "c1",
-    labels: ["Frontend", "UI"],
-    start_date: "2026-07-22",
-    due_date: "2026-07-29",
-    created_at: "2026-07-22T00:00:00Z",
+    created_at: "2026-07-03T00:00:00Z",
   },
 ];
 
-export let mockIssues: Issue[] = loadFromStorage(
-  "mockIssues",
-  defaultIssues
-);
+export let mockIssues: Issue[] = loadFromStorage("mockIssues", defaultIssues);
 
 if (isBrowser) {
   saveToStorage("mockIssues", mockIssues);
@@ -359,8 +443,7 @@ const defaultComments: Comment[] = [
     id: "comment-6",
     issue_id: "FE-2",
     user_id: "u2",
-    content:
-      "I found a small issue when testing this flow on mobile devices.",
+    content: "I found a small issue when testing this flow on mobile devices.",
     created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
   },
   {
@@ -375,16 +458,14 @@ const defaultComments: Comment[] = [
     id: "comment-8",
     issue_id: "FE-2",
     user_id: "u4",
-    content:
-      "This should be fixed together with the next UI update.",
+    content: "This should be fixed together with the next UI update.",
     created_at: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
   },
   {
     id: "comment-9",
     issue_id: "FE-2",
     user_id: "u1",
-    content:
-      "Do we have an estimated completion date for this issue?",
+    content: "Do we have an estimated completion date for this issue?",
     created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
   },
   {
@@ -398,13 +479,10 @@ const defaultComments: Comment[] = [
 ];
 
 // Merge dữ liệu mẫu mới với dữ liệu đã lưu trong localStorage
-const storedComments = loadFromStorage<Comment[]>(
-  "mockComments",
-  []
-);
+const storedComments = loadFromStorage<Comment[]>("mockComments", []);
 
 const commentMap = new Map(
-  storedComments.map((comment) => [comment.id, comment])
+  storedComments.map((comment) => [comment.id, comment]),
 );
 
 defaultComments.forEach((comment) => {
@@ -418,3 +496,94 @@ export let mockComments: Comment[] = Array.from(commentMap.values());
 if (isBrowser) {
   saveToStorage("mockComments", mockComments);
 }
+
+// ─── KHỞI TẠO MOCK DATA CHO GIAI ĐOẠN 2 ───
+
+// Bảng Members
+const defaultMembers: Member[] = [
+  {
+    id: "mem-1",
+    workspace_id: "w1",
+    email: "phuoc@example.com",
+    role: "owner",
+    joined_at: new Date(Date.now() - 3600000 * 24 * 7).toISOString(),
+  },
+  {
+    id: "mem-2",
+    workspace_id: "w1",
+    email: "nhan@example.com",
+    role: "admin",
+    joined_at: new Date(Date.now() - 3600000 * 24 * 5).toISOString(),
+  },
+  {
+    id: "mem-3",
+    workspace_id: "w1",
+    email: "tram@example.com",
+    role: "member",
+    joined_at: new Date(Date.now() - 3600000 * 24 * 2).toISOString(),
+  },
+];
+export let mockMembers: Member[] = loadFromStorage<Member[]>(
+  "mockMembers",
+  defaultMembers,
+);
+if (isBrowser) saveToStorage("mockMembers", mockMembers);
+
+// Bảng Pages (Tài liệu Wiki)
+const defaultPages: Page[] = [
+  {
+    id: "page-1",
+    project_id: "p1",
+    name: "Hướng dẫn cài đặt dự án",
+    content:
+      "<h1>Khởi chạy dự án</h1><p>Chạy lệnh npm install và npm run dev để khởi động.</p>",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+export let mockPages: Page[] = loadFromStorage<Page[]>(
+  "mockPages",
+  defaultPages,
+);
+if (isBrowser) saveToStorage("mockPages", mockPages);
+
+// Bảng Custom Views
+const defaultViews: CustomView[] = [
+  {
+    id: "view-1",
+    project_id: "p1",
+    name: "Tất cả Bug khẩn cấp",
+    filters: { priority: "Urgent" },
+    created_at: new Date().toISOString(),
+  },
+];
+export let mockViews: CustomView[] = loadFromStorage<CustomView[]>(
+  "mockViews",
+  defaultViews,
+);
+if (isBrowser) saveToStorage("mockViews", mockViews);
+
+// Bảng Notifications (Hộp thư Inbox)
+const defaultNotifications: Notification[] = [
+  {
+    id: "notif-1",
+    user_id: "u1",
+    title: "Có người nhắc đến bạn",
+    message: "Trâm đã nhắc đến bạn trong một comment ở task FE-1",
+    is_read: false,
+    created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
+  },
+  {
+    id: "notif-2",
+    user_id: "u1",
+    title: "Task mới được giao",
+    message: "Điền đã giao cho bạn task BE-5",
+    is_read: true,
+    created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
+  },
+];
+export let mockNotifications: Notification[] = loadFromStorage<Notification[]>(
+  "mockNotifications",
+  defaultNotifications,
+);
+if (isBrowser) saveToStorage("mockNotifications", mockNotifications);
