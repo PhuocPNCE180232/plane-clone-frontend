@@ -75,7 +75,7 @@ apiClient.interceptors.request.use(
   (error: unknown) => {
     // Request setup failed before it was sent (e.g. invalid config).
     return Promise.reject(normaliseError(error));
-  }
+  },
 );
 
 // ─── Response interceptor ─────────────────────────────────────────────────
@@ -92,11 +92,20 @@ apiClient.interceptors.request.use(
 // backend authentication contract is confirmed.
 
 apiClient.interceptors.response.use(
-  // Success — return response as-is so callers receive the full AxiosResponse.
   (response) => response,
+  (error: unknown) => {
+    // Nếu lỗi là 401 (Chưa đăng nhập hoặc rớt mạng / mất cookie)
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      // Tự động đá người dùng về trang đăng nhập
+      if (
+        typeof window !== "undefined" &&
+        !window.location.pathname.includes("/login")
+      ) {
+        window.location.href = "/login";
+      }
+    }
 
-  // Error — normalise into ApiError and re-throw.
-  // Downstream service functions and React Query hooks will receive a
-  // typed ApiError with { message, status, code } on every failure.
-  (error: unknown) => Promise.reject(normaliseError(error))
+    // Normalise error như code cũ của sếp
+    return Promise.reject(normaliseError(error));
+  },
 );

@@ -17,7 +17,7 @@ import {
   mockModules,
   mockIssues,
   mockComments,
-  // --- BỔ SUNG IMPORTS CHO PHASE 2 ---
+  // --- BỔ SUNG IMPORTS ---
   mockMembers,
   mockPages,
   mockViews,
@@ -228,7 +228,9 @@ export const handlers: ReturnType<typeof http.all>[] = [
       return jsonResponse({ error: "User not found" }, { status: 404 });
     }
 
-    return jsonResponse({ user });
+    const { password, ...safeUser } = user;
+
+    return jsonResponse({ user: safeUser });
   }),
 
   http.post(`${BASE}/auth/logout`, async () => {

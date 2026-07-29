@@ -1,4 +1,4 @@
-// 1. ĐỊNH NGHĨA KIỂU DỮ LIỆU (INTERFACES)
+// 1. ĐỊNH NGHĨA KIỂU DỮ LIỆU
 
 export interface User {
   id: string;
@@ -11,16 +11,16 @@ export interface User {
 export interface Workspace {
   id: string;
   name: string;
-  slug: string; // Tên viết liền không dấu, vd: "fpt-software"
+  slug: string; 
   owner_id: string;
-  logo?: string; // Emoji hoặc URL logo workspace
+  logo?: string; 
 }
 
 export interface Project {
   id: string;
   workspaceId: string;
   name: string;
-  identifier: string; // Mã dự án (vd: FE, BE)
+  identifier: string; 
   description: string;
   createdAt?: string;
   network?: "public" | "private";
@@ -55,7 +55,7 @@ export interface Cycle {
   description?: string;
   start_date: string;
   end_date: string;
-  progress?: number; // % complete for cycle progress display
+  progress?: number; 
 }
 
 export interface Module {
@@ -63,12 +63,12 @@ export interface Module {
   project_id: string;
   name: string;
   description: string;
-  progress?: number; // % complete for module progress display
+  progress?: number; 
   start_date?: string;
   end_date?: string;
 }
 
-// ─── THÊM KIỂU DỮ LIỆU MỚI (GIAI ĐOẠN 2) ───
+// ─── THÊM KIỂU DỮ LIỆU MỚI ───
 export interface Member {
   id: string;
   workspace_id: string;
@@ -103,7 +103,7 @@ export interface Notification {
   created_at: string;
 }
 
-// 2. CÁC HÀM TRỢ GIÚP LƯU TRỮ (STORAGE HELPERS)
+// 2. CÁC HÀM TRỢ GIÚP LƯU TRỮ
 
 const isBrowser = typeof window !== "undefined";
 
@@ -130,9 +130,8 @@ export const saveToStorage = (key: string, value: any) => {
   localStorage.setItem(key, JSON.stringify(value));
 };
 
-// 3. KHỞI TẠO DỮ LIỆU MẪU (MOCK DATA)
+// 3. KHỞI TẠO DỮ LIỆU MẪU
 
-// Bảng Users (7 anh em team Plane Clone)
 const defaultUsers: User[] = [
   {
     id: "u1",
