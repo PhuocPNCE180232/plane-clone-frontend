@@ -14,8 +14,6 @@ type IssueRowProps = {
   onDelete?: (id: string) => void;
 };
 
-const LABEL_PLACEHOLDER = "UI";
-
 export const IssueRow = ({ issue, onDelete }: IssueRowProps) => {
   const [openDelete, setOpenDelete] = useState(false);
 
@@ -104,13 +102,19 @@ export const IssueRow = ({ issue, onDelete }: IssueRowProps) => {
 
       {/* Label */}
       <span className="shrink-0 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-600">
-        {LABEL_PLACEHOLDER}
+        {issue.labels?.length
+          ? issue.labels.join(", ")
+          : "-"}
       </span>
 
       {/* Due Date */}
       <div className="flex w-24 shrink-0 items-center gap-1 text-[11px] text-gray-400">
         <CalendarDays className="h-3 w-3 shrink-0" />
-        <span>Jul 12, 2026</span>
+        <span>
+          {issue.due_date
+            ? new Date(issue.due_date).toLocaleDateString()
+            : "-"}
+        </span>
       </div>
 
       {/* Assignee */}

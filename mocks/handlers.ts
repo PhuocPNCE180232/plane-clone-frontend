@@ -78,6 +78,9 @@ interface IssuePayload {
   assignee_id?: string | null;
   module_id?: string | null;
   cycle_id?: string | null;
+  labels?: string[];
+  start_date?: string | null;
+  due_date?: string | null;
 }
 
 interface CommentPayload {
@@ -565,26 +568,29 @@ export const handlers: ReturnType<typeof http.all>[] = [
 
       const newIssue = {
         id: `FE-${nextIssueNumber}`,
+
         project_id: body.project_id || "p1",
+
         title: body.title,
+
         description: body.description ?? "",
-        state:
-          (body.state as
-            | "Backlog"
-            | "Todo"
-            | "In Progress"
-            | "Done"
-            | "Cancelled") ?? "Todo",
-        priority:
-          (body.priority as
-            | "Urgent"
-            | "High"
-            | "Medium"
-            | "Low"
-            | "None") ?? "Low",
+
+        state: body.state ?? "Todo",
+
+        priority: body.priority ?? "Low",
+
         assignee_id: body.assignee_id ?? null,
+
         module_id: body.module_id ?? null,
+
         cycle_id: body.cycle_id ?? null,
+
+        labels: body.labels ?? [],
+
+        start_date: body.start_date ?? null,
+
+        due_date: body.due_date ?? null,
+
         created_at: new Date().toISOString(),
       };
 

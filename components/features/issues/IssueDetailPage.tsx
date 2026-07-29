@@ -1,6 +1,13 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
+
 import { IssueDetails } from "./IssueDetails";
 import { CommentSection } from "./CommentSection";
+
+import { getIssueById } from "@/lib/services/issue.service";
+import type { Issue } from "@/types";
 
 interface IssueDetailPageProps {
   issueId: string;
@@ -9,6 +16,35 @@ interface IssueDetailPageProps {
 export const IssueDetailPage = ({
   issueId,
 }: IssueDetailPageProps) => {
+  const [issue, setIssue] = useState<Issue | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchIssue = async () => {
+      try {
+        const data = await getIssueById(issueId);
+
+        console.log("Issue API:", data);
+
+        setIssue(data);
+      } catch (error) {
+        console.error("Load issue failed:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchIssue();
+  }, [issueId]);
+
+  if (loading) {
+    return (
+      <div className="p-8 text-gray-500">
+        Loading...
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="mb-4 flex items-center gap-1.5 text-sm text-gray-500">
@@ -31,8 +67,12 @@ export const IssueDetailPage = ({
 
       <div className="grid grid-cols-3 gap-8">
         <div className="col-span-2">
-          <IssueDetails />
+
+          {/* Truyền dữ liệu issue sang */}
+          <IssueDetails issue={issue ?? undefined} />
+
           <CommentSection issueId={issueId} />
+
         </div>
 
         <div className="col-span-1" />
