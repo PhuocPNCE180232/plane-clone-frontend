@@ -30,13 +30,32 @@ export interface Project {
 export interface Issue {
   id: string;
   project_id: string;
+
   title: string;
   description: string;
-  state: "Backlog" | "Todo" | "In Progress" | "Done" | "Cancelled";
-  priority: "Urgent" | "High" | "Medium" | "Low" | "None";
+
+  state:
+    | "Backlog"
+    | "Todo"
+    | "In Progress"
+    | "Done"
+    | "Cancelled";
+
+  priority:
+    | "Urgent"
+    | "High"
+    | "Medium"
+    | "Low"
+    | "None";
+
   assignee_id: string | null;
   module_id: string | null;
   cycle_id: string | null;
+
+  labels?: string[];
+  start_date?: string | null;
+  due_date?: string | null;
+
   created_at: string;
 }
 
@@ -375,6 +394,9 @@ const defaultIssues: Issue[] = [
     assignee_id: "u2",
     module_id: "m2",
     cycle_id: "c1",
+    labels: ["frontend", "setup"],
+    start_date: "2026-07-03",
+    due_date: "2026-07-06",
     created_at: "2026-07-03T00:00:00Z",
   },
   {
@@ -387,6 +409,9 @@ const defaultIssues: Issue[] = [
     assignee_id: "u4",
     module_id: "m1",
     cycle_id: "c1",
+    labels: ["auth", "ui"],
+    start_date: "2026-07-02",
+    due_date: "2026-07-07",
     created_at: "2026-07-03T00:00:00Z",
   },
 ];

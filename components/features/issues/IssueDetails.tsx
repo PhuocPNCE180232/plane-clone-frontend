@@ -18,9 +18,14 @@ export interface IssueDetailsProps {
     module?: NamedEntity;
     cycle?: NamedEntity;
   };
+
+  onEdit?: () => void;
 }
 
-export const IssueDetails = ({ issue }: IssueDetailsProps) => {
+export const IssueDetails = ({
+  issue,
+  onEdit,
+}: IssueDetailsProps) => {
   const {
     title,
     description,
@@ -53,6 +58,13 @@ export const IssueDetails = ({ issue }: IssueDetailsProps) => {
           <IssuePriorityBadge priority={priority ?? "Low"} />
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={onEdit}
+            className="rounded border px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+          >
+            Edit
+          </button>
+
           <button className="rounded p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800">
             <MoreHorizontal className="h-4 w-4" />
           </button>

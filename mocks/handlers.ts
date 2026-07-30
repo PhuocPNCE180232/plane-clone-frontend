@@ -88,6 +88,9 @@ interface IssuePayload {
   assignee_id?: string | null;
   module_id?: string | null;
   cycle_id?: string | null;
+  labels?: string[];
+  start_date?: string | null;
+  due_date?: string | null;
 }
 
 interface CommentPayload {
@@ -214,6 +217,18 @@ export const handlers: ReturnType<typeof http.all>[] = [
         },
       },
     );
+  }),
+
+  http.get(`${BASE}/users`, async ({ request }) => {
+    const sessionId = getSessionId(request);
+
+    if (!sessionId) {
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const users = mockUsers.map(({ password, ...user }) => user);
+
+    return jsonResponse(users);
   }),
 
   http.get(`${BASE}/users/me`, async ({ request }) => {
@@ -603,8 +618,10 @@ export const handlers: ReturnType<typeof http.all>[] = [
       const newIssue = {
         id: `FE-${nextIssueNumber}`,
         project_id: body.project_id || "p1",
+
         title: body.title,
         description: body.description ?? "",
+
         state:
           (body.state as
             | "Backlog"
@@ -612,12 +629,25 @@ export const handlers: ReturnType<typeof http.all>[] = [
             | "In Progress"
             | "Done"
             | "Cancelled") ?? "Todo",
+
         priority:
-          (body.priority as "Urgent" | "High" | "Medium" | "Low" | "None") ??
-          "Low",
+          (body.priority as
+            | "Urgent"
+            | "High"
+            | "Medium"
+            | "Low"
+            | "None") ?? "Low",
+
         assignee_id: body.assignee_id ?? null,
         module_id: body.module_id ?? null,
         cycle_id: body.cycle_id ?? null,
+
+        labels: body.labels ?? [],
+
+        start_date: body.start_date ?? "",
+
+        due_date: body.due_date ?? "",
+
         created_at: new Date().toISOString(),
       };
 
@@ -753,7 +783,26 @@ export const handlers: ReturnType<typeof http.all>[] = [
       return jsonResponse({ error: "Issue not found" }, { status: 404 });
     }
 
-    return jsonResponse(issue);
+    const assignee = mockUsers.find(
+      (u) => u.id === issue.assignee_id
+    );
+    const project = mockProjects.find(
+      (p) => p.id === issue.project_id
+    );
+    const module = mockModules.find(
+      (m) => m.id === issue.module_id
+    );
+    const cycle = mockCycles.find(
+      (c) => c.id === issue.cycle_id
+    );
+
+    return jsonResponse({
+      ...issue,
+      assignee,
+      project,
+      module,
+      cycle,
+    });
   }),
 
   // ─── GIAI ĐOẠN 2: SETTINGS, MEMBERS, PAGES, INBOX, ANALYTICS ───
