@@ -6,7 +6,7 @@ import { useProjects } from "@/hooks/use-projects";
 import { useAppStore } from "@/hooks/use-app-store";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Check, Folder } from "lucide-react";
+import { ChevronDown, Check, Folder, Settings } from "lucide-react";
 import Link from "next/link";
 
 export const Header = () => {
@@ -17,10 +17,16 @@ export const Header = () => {
   const { data: workspaces } = useWorkspaces();
   const { data: projects, isLoading: isProjectsLoading } = useProjects();
   
-  const { activeProjectId, setProject } = useAppStore();
+  const { activeProjectId, setProject, activeWorkspaceId, setWorkspace } = useAppStore();
   
   const currentWorkspace = workspaces?.find((w) => w.slug === currentSlug) || workspaces?.[0];
   const currentProject = projects?.find((p) => p.id === activeProjectId) || projects?.[0];
+
+  useEffect(() => {
+    if (currentWorkspace && currentWorkspace.id !== activeWorkspaceId) {
+      setWorkspace(currentWorkspace.id);
+    }
+  }, [currentWorkspace, activeWorkspaceId, setWorkspace]);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -99,6 +105,17 @@ export const Header = () => {
                   </button>
                 ))}
               </div>
+              
+              <div className="my-1 border-t border-gray-100" />
+              
+              <Link
+                href={`/${currentWorkspace?.slug}/projects/${currentProject?.id}/settings`}
+                onClick={() => setIsDropdownOpen(false)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                <Settings className="h-4 w-4 text-gray-500" />
+                Project settings
+              </Link>
             </div>
           )}
         </div>
