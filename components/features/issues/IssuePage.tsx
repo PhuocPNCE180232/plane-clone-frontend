@@ -1,41 +1,48 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { IssueHeader } from "./IssueHeader";
-import { IssueToolbar } from "./IssueToolbar";
+import { IssueToolbar, type IssueView } from "./IssueToolbar";
 import { IssueTable } from "./IssueTable";
 import IssueBoard from "./board/IssueBoard";
+import { IssueAnalyticsView } from "./IssueAnalyticsView";
+import { IssueCalendarView } from "./IssueCalendarView";
+import { IssueSavedViews } from "./IssueSavedViews";
 
 import {
   getIssues,
   deleteIssue,
 } from "@/lib/services/issue.service";
 
-import type { Issue } from "@/types";
-
 interface IssuePageProps {
   projectId: string;
 }
 
+const issuePageKeys = {
+  list: (projectId: string) => ["issues", "page", projectId] as const,
+};
+
 export const IssuePage = ({ projectId }: IssuePageProps) => {
-  const [issues, setIssues] = useState<Issue[]>([]);
-  const [view, setView] = useState<"list" | "board">("list");
+  const [view, setView] = useState<IssueView>("list");
 
-  const loadIssues = async () => {
-    try {
-      const data = await getIssues(projectId);
-      setIssues(data);
-    } catch {
-      toast.error("Cannot load issues");
-    }
+  const queryClient = useQueryClient();
+
+  const issuesQuery = useQuery({
+    queryKey: issuePageKeys.list(projectId),
+    queryFn: () => getIssues(projectId),
+  });
+
+  const issues = issuesQuery.data ?? [];
+
+  const loadIssues = () => {
+    queryClient.invalidateQueries({
+      queryKey: issuePageKeys.list(projectId),
+    });
   };
-
-  useEffect(() => {
-    loadIssues();
-  }, [projectId]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -45,6 +52,52 @@ export const IssuePage = ({ projectId }: IssuePageProps) => {
     } catch {
       toast.error("Delete failed");
     }
+  };
+
+  const renderView = () => {
+    if (issuesQuery.isLoading) {
+      return (
+        <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-400">
+          Loading issues...
+        </div>
+      );
+    }
+
+    if (issuesQuery.isError) {
+      return (
+        <div className="rounded-xl border border-red-100 bg-red-50 p-6 text-sm text-red-500">
+          Cannot load issues.
+        </div>
+      );
+    }
+
+    if (view === "list") {
+      return (
+        <IssueTable
+          issues={issues}
+          onDelete={handleDelete}
+        />
+      );
+    }
+
+    if (view === "board") {
+      return (
+        <IssueBoard
+          issues={issues}
+          reload={loadIssues}
+        />
+      );
+    }
+
+    if (view === "calendar") {
+      return <IssueCalendarView issues={issues} />;
+    }
+
+    if (view === "analytics") {
+      return <IssueAnalyticsView issues={issues} />;
+    }
+
+    return <IssueSavedViews projectId={projectId} />;
   };
 
   return (
@@ -65,17 +118,7 @@ export const IssuePage = ({ projectId }: IssuePageProps) => {
         onCreated={loadIssues}
       />
 
-      {view === "list" ? (
-        <IssueTable
-          issues={issues}
-          onDelete={handleDelete}
-        />
-      ) : (
-        <IssueBoard
-          issues={issues}
-          reload={loadIssues}
-        />
-      )}
+      {renderView()}
     </>
   );
 };

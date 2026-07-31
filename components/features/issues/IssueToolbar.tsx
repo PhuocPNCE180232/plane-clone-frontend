@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { IssueForm } from "./IssueForm";
 
 import {
@@ -13,8 +14,10 @@ import {
   Plus,
 } from "lucide-react";
 
+export type IssueView = "list" | "board" | "calendar" | "analytics" | "views";
+
 type ToolbarBtnProps = {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   active?: boolean;
 };
@@ -49,12 +52,8 @@ const Divider = () => (
 
 interface IssueToolbarProps {
   onCreated: () => void;
-
-  view: "list" | "board";
-
-  setView: React.Dispatch<
-    React.SetStateAction<"list" | "board">
-  >;
+  view: IssueView;
+  setView: Dispatch<SetStateAction<IssueView>>;
 }
 
 export const IssueToolbar = ({
@@ -68,7 +67,7 @@ export const IssueToolbar = ({
     <>
       <div className="mb-4 flex items-center justify-between border-b border-gray-200 pb-3">
         <div className="flex items-center gap-0.5">
-          <button onClick={() => setView("list")}>
+          <button type="button" onClick={() => setView("list")}>
             <ToolbarBtn
               icon={<List className="h-3.5 w-3.5" />}
               label="List"
@@ -76,42 +75,44 @@ export const IssueToolbar = ({
             />
           </button>
 
-          <button onClick={() => setView("board")}>
+          <button type="button" onClick={() => setView("board")}>
             <ToolbarBtn
-              icon={
-                <LayoutGrid className="h-3.5 w-3.5" />
-              }
+              icon={<LayoutGrid className="h-3.5 w-3.5" />}
               label="Board"
               active={view === "board"}
             />
           </button>
 
-          <ToolbarBtn
-            icon={
-              <CalendarDays className="h-3.5 w-3.5" />
-            }
-            label="Calendar"
-          />
+          <button type="button" onClick={() => setView("calendar")}>
+            <ToolbarBtn
+              icon={<CalendarDays className="h-3.5 w-3.5" />}
+              label="Calendar"
+              active={view === "calendar"}
+            />
+          </button>
 
           <Divider />
 
-          <ToolbarBtn
-            icon={
-              <BarChart2 className="h-3.5 w-3.5" />
-            }
-            label="Analytics"
-          />
+          <button type="button" onClick={() => setView("analytics")}>
+            <ToolbarBtn
+              icon={<BarChart2 className="h-3.5 w-3.5" />}
+              label="Analytics"
+              active={view === "analytics"}
+            />
+          </button>
 
-          <ToolbarBtn
-            icon={
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-            }
-            label="Display"
-          />
+          <button type="button" onClick={() => setView("views")}>
+            <ToolbarBtn
+              icon={<SlidersHorizontal className="h-3.5 w-3.5" />}
+              label="Display"
+              active={view === "views"}
+            />
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
           <button
+            type="button"
             className="
               flex items-center gap-1.5
               rounded-md border border-gray-300 bg-white
@@ -125,6 +126,7 @@ export const IssueToolbar = ({
           </button>
 
           <button
+            type="button"
             onClick={() => setOpen(true)}
             className="
               flex items-center gap-1.5
