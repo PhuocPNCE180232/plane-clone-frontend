@@ -4,7 +4,7 @@
  * Auth API service functions.
  */
 
-import { get, post } from "@/lib/api/request";
+import { get, post, patch } from "@/lib/api/request";
 import type { User } from "@/types";
 
 export type LoginDto = {
@@ -32,4 +32,14 @@ export const getMe = (): Promise<{ user: User }> => {
 
 export const logout = (): Promise<{ success: boolean }> => {
   return post<{ success: boolean }>("/auth/logout");
+};
+
+export type UpdateProfileDto = {
+  name?: string;
+  email?: string;
+  password?: string;
+};
+
+export const updateProfile = (data: UpdateProfileDto): Promise<{ user: User }> => {
+  return patch<{ user: User }, UpdateProfileDto>("/users/me", data);
 };

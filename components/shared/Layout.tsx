@@ -8,10 +8,10 @@ type LayoutProps = {
 
 export const Layout = ({ children }: LayoutProps) => {
     return (
-        <div className="h-screen flex flex-col">
+        <div className="h-screen flex flex-col overflow-hidden">
             <Header />
 
-            <div className="flex flex-1">
+            <div className="flex flex-1 overflow-hidden">
                 <Sidebar />
 
                 <MainContent>

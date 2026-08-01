@@ -36,7 +36,7 @@ export const Header = () => {
   }, []);
 
   return (
-    <header className="h-16 bg-[#151b2f] flex items-center justify-between px-6">
+    <header className="h-16 shrink-0 bg-[#151b2f] flex items-center justify-between px-6">
       <div className="flex items-center gap-2">
         {/* Workspace Name (Static part of breadcrumb) */}
         {currentWorkspace && (

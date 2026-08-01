@@ -758,6 +758,35 @@ export const handlers: ReturnType<typeof http.all>[] = [
 
   // ─── GIAI ĐOẠN 2: SETTINGS, MEMBERS, PAGES, INBOX, ANALYTICS ───
 
+  // --- UPDATE PROFILE (PATCH) ---
+  http.patch(`${BASE}/users/me`, async ({ request }) => {
+    try {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const body = (await request.json()) as Partial<User>;
+      
+      const userIndex = mockUsers.findIndex(u => u.id === sessionId);
+      if (userIndex === -1) {
+        return jsonResponse({ error: "User not found" }, { status: 404 });
+      }
+
+      mockUsers[userIndex] = {
+        ...mockUsers[userIndex],
+        ...body,
+      };
+
+      saveToStorage("mockUsers", mockUsers);
+
+      return jsonResponse({
+        user: mockUsers[userIndex],
+      });
+    } catch (e: unknown) {
+      return handleError(e, "PATCH /users/me");
+    }
+  }),
+
   // --- ACCOUNT SETTINGS (PATCH) ---
   http.patch(`${BASE}/users/me/settings`, async ({ request }) => {
     try {

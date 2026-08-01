@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User } from "@/types";
-import { login as loginService, signup as signupService, getMe, logout as logoutService, LoginDto, SignupDto } from "@/lib/services/auth.service";
+import { login as loginService, signup as signupService, getMe, logout as logoutService, updateProfile as updateProfileService, LoginDto, SignupDto, UpdateProfileDto } from "@/lib/services/auth.service";
 
 interface AuthState {
   user: User | null;
@@ -11,6 +11,7 @@ interface AuthState {
   signup: (data: SignupDto) => Promise<void>;
   logout: () => Promise<void>;
   fetchUser: () => Promise<void>;
+  updateUser: (data: UpdateProfileDto) => Promise<void>;
 }
 
 export const useAuth = create<AuthState>()(
@@ -65,6 +66,17 @@ export const useAuth = create<AuthState>()(
           set({ user: response.user, isAuthenticated: true, isLoading: false });
         } catch (error) {
           set({ user: null, isAuthenticated: false, isLoading: false });
+        }
+      },
+
+      updateUser: async (data: UpdateProfileDto) => {
+        set({ isLoading: true });
+        try {
+          const response = await updateProfileService(data);
+          set({ user: response.user, isAuthenticated: true, isLoading: false });
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
         }
       },
     }),

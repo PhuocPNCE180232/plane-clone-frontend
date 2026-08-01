@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Loader2 } from "lucide-react";
+import { LogOut, Loader2, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import Image from "next/image";
 
@@ -81,6 +81,18 @@ export function UserDropdown() {
               <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{user?.email ?? ""}</p>
             </div>
           </div>
+          
+          <button
+            onClick={() => {
+              setIsOpen(false);
+              router.push("/account");
+            }}
+            className="flex w-full items-center px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+          >
+            <Settings className="mr-2 h-4 w-4 text-zinc-500" />
+            Account Setting
+          </button>
+
           <button
             onClick={handleLogout}
             disabled={isLoggingOut}
@@ -95,6 +107,7 @@ export function UserDropdown() {
           </button>
         </div>
       )}
+
     </div>
   );
 }
