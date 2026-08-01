@@ -29,6 +29,7 @@ export interface Module {
   name: string;
   description?: string;
   progress?: number;
+  status?: "Backlog" | "Planned" | "In Progress" | "Paused" | "Completed" | "Cancelled";
   start_date?: string;
   end_date?: string;
 }

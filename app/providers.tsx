@@ -31,8 +31,15 @@ export function Providers({ children }: ProvidersProps) {
   useEffect(() => {
     async function enableMocking() {
       if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-        const { worker } = await import("@/mocks/browser");
-        await worker.start({ onUnhandledRequest: "bypass" });
+        try {
+          const { worker } = await import("@/mocks/browser");
+          await worker.start({
+            onUnhandledRequest: "bypass",
+            serviceWorker: { url: "/mockServiceWorker.js" },
+          });
+        } catch (error) {
+          console.warn("MSW failed to start:", error);
+        }
       }
       setMswReady(true);
     }

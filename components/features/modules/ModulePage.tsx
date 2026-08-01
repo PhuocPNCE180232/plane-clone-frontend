@@ -1,9 +1,19 @@
+"use client";
+
+import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { ModuleHeader } from "./ModuleHeader";
 import { ModuleToolbar } from "./ModuleToolbar";
 import { ModuleGrid } from "./ModuleGrid";
 
+type ModuleFilterStatus = "all" | "backlog" | "planned" | "in_progress" | "paused" | "completed" | "cancelled";
+
 export const ModulePage = () => {
+  const [view, setView] = useState<"board" | "list">("board");
+  const [sortKey, setSortKey] = useState<"name" | "progress" | "work_items" | "due_date">("name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [filterStatus, setFilterStatus] = useState<ModuleFilterStatus>("all");
+
   return (
     <>
       {/* Breadcrumb — same pattern as CyclePage, IssuePage, ProjectPage */}
@@ -16,8 +26,22 @@ export const ModulePage = () => {
       </div>
 
       <ModuleHeader />
-      <ModuleToolbar />
-      <ModuleGrid />
+      <ModuleToolbar
+        view={view}
+        setView={setView}
+        sortKey={sortKey}
+        setSortKey={setSortKey}
+        sortDirection={sortDirection}
+        setSortDirection={setSortDirection}
+        filterStatus={filterStatus}
+        setFilterStatus={setFilterStatus}
+      />
+      <ModuleGrid
+        view={view}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        filterStatus={filterStatus}
+      />
     </>
   );
 };

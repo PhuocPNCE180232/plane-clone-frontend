@@ -1,6 +1,8 @@
 import { CalendarDays, Clock3, MoreHorizontal } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Cycle, Issue } from "@/mocks/db";
 import { deleteCycle, updateCycle } from "@/lib/services/cycle.service";
@@ -14,12 +16,6 @@ type CycleCardProps = {
   issues: Issue[];
 };
 
-type CycleEditFormValues = {
-  title: string;
-  description?: string;
-  startDate: string;
-  endDate: string;
-};
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -36,6 +32,8 @@ function getDaysLeft(endDate: string): number {
 }
 
 export const CycleCard = ({ cycle, issues }: CycleCardProps) => {
+  const params = useParams<{ workspaceSlug: string }>();
+  const href = params?.workspaceSlug ? `/${params.workspaceSlug}/cycles/${cycle.id}` : `/cycles/${cycle.id}`;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -83,18 +81,19 @@ export const CycleCard = ({ cycle, issues }: CycleCardProps) => {
 
   return (
     <>
-      <Card
-        className="
-          group relative
-          cursor-pointer
-          hover:shadow-md hover:-translate-y-0.5
-          transition-all duration-200
-        "
-      >
-        {/* Three-dot menu */}
+      <Link href={href} className="group relative block">
+        <Card
+          className="
+            cursor-pointer
+            hover:shadow-md hover:-translate-y-0.5
+            transition-all duration-200
+          "
+        >
+          {/* Three-dot menu */}
         <div className="absolute right-4 top-4">
           <button
             onClick={(event) => {
+              event.preventDefault();
               event.stopPropagation();
               setIsMenuOpen((current) => !current);
             }}
@@ -163,6 +162,7 @@ export const CycleCard = ({ cycle, issues }: CycleCardProps) => {
         </span>
       </div>
     </Card>
+      </Link>
 
     {isEditOpen && (
       <CycleEditModal

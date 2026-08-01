@@ -26,15 +26,36 @@ import type { Comment } from "@/mocks/db";
  */
 export interface CreateIssuePayload {
   project_id: string;
+  projectId?: string;
   title: string;
   description: string;
-  state: string;
-  priority: string;
+  state:
+    | "Backlog"
+    | "Todo"
+    | "In Progress"
+    | "Done"
+    | "Cancelled";
+  priority:
+    | "Urgent"
+    | "High"
+    | "Medium"
+    | "Low"
+    | "None";
   assignee_id: string | null;
+  assigneeId?: string | null;
+  module_id: string | null;
+  moduleId?: string | null;
+  cycle_id: string | null;
+  cycleId?: string | null;
 }
 
+export type CreateIssueDto = CreateIssuePayload;
+
 /** All fields are optional on update (partial edit). */
-export type UpdateIssueDto = Partial<CreateIssuePayload>;
+export type UpdateIssueDto = Partial<Omit<CreateIssuePayload, "state" | "priority">> & {
+  state?: string;
+  priority?: string;
+};
 
 // ─── Service functions ─────────────────────────────────────────────────────
 

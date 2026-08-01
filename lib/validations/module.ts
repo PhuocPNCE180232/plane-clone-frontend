@@ -6,6 +6,9 @@ export const createModuleSchema = z
     description: z.string().optional(),
     startDate: z.string().optional(),
     endDate: z.string().optional(),
+    status: z
+      .enum(["Backlog", "Planned", "In Progress", "Paused", "Completed", "Cancelled"])
+      .optional(),
   })
   .superRefine((val, ctx) => {
     if (val.startDate && val.endDate) {

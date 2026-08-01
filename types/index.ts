@@ -29,6 +29,7 @@ export interface Project {
 export interface Issue {
   id: string;
   project_id: string;
+  projectId?: string;
   title: string;
   description: string;
 
@@ -47,8 +48,20 @@ export interface Issue {
     | "None";
 
   assignee_id: string | null;
+  assigneeId?: string | null;
   module_id: string | null;
+  moduleId?: string | null;
   cycle_id: string | null;
+  cycleId?: string | null;
 
+  created_at: string;
+  createdAt?: string;
+}
+
+export interface Comment {
+  id: string;
+  issue_id: string;
+  user_id: string;
+  content: string;
   created_at: string;
 }

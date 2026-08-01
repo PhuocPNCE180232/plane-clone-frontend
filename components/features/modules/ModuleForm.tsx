@@ -54,9 +54,23 @@ const DateRangeToggle = () => {
   );
 };
 
-const StatusDropdown = ({ name = "status" }: { name?: string }) => {
+const StatusDropdown = ({
+  name = "status",
+  value,
+  onChange,
+}: {
+  name?: string;
+  value?: string;
+  onChange?: (value: string) => void;
+}) => {
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState("Backlog");
+  const [selected, setSelected] = useState(value ?? "Backlog");
+
+  React.useEffect(() => {
+    if (value) {
+      setSelected(value);
+    }
+  }, [value]);
 
   const options: { key: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>> }[] = [
     { key: "Backlog", label: "Backlog", icon: Archive },
@@ -90,6 +104,7 @@ const StatusDropdown = ({ name = "status" }: { name?: string }) => {
                 type="button"
                 onClick={() => {
                   setSelected(opt.key);
+                  onChange?.(opt.key);
                   setOpen(false);
                 }}
                 className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left hover:bg-gray-50"
@@ -111,6 +126,7 @@ const StatusDropdown = ({ name = "status" }: { name?: string }) => {
 export const ModuleForm = ({ onClose }: Props) => {
   const queryClient = useQueryClient();
   const { activeProjectId } = useAppStore();
+  const [status, setStatus] = useState("Backlog");
 
   const { mutate: handleCreateModule, isPending } = useMutation({
     mutationFn: createModule,
@@ -133,6 +149,7 @@ export const ModuleForm = ({ onClose }: Props) => {
       description: (form.elements.namedItem("description") as HTMLTextAreaElement)?.value,
       startDate: (form.elements.namedItem("startDate") as HTMLInputElement)?.value,
       endDate: (form.elements.namedItem("endDate") as HTMLInputElement)?.value,
+      status,
     };
 
     const res = createModuleSchema.safeParse(payload);
@@ -148,6 +165,7 @@ export const ModuleForm = ({ onClose }: Props) => {
       description: res.data.description || "",
       start_date: res.data.startDate || "",
       end_date: res.data.endDate || "",
+      status: res.data.status,
       progress: 0,
     });
   };
@@ -169,14 +187,7 @@ export const ModuleForm = ({ onClose }: Props) => {
 
       <div className="flex items-center gap-2">
         <DateRangeToggle />
-
-        <StatusDropdown />
-        <button type="button" className="rounded-md border px-3 py-1 text-sm bg-white text-black">
-          Lead
-        </button>
-        <button type="button" className="rounded-md border px-3 py-1 text-sm bg-white text-black">
-          Members
-        </button>
+        <StatusDropdown value={status} onChange={setStatus} />
       </div>
 
       <div className="flex justify-end gap-3">

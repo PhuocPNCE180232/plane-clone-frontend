@@ -4,6 +4,9 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { createIssue } from "@/lib/services/issue.service";
 
+type IssueState = "Backlog" | "Todo" | "In Progress" | "Done" | "Cancelled";
+type IssuePriority = "Urgent" | "High" | "Medium" | "Low" | "None";
+
 interface IssueFormProps {
   onClose: () => void;
   onCreated: () => void;
@@ -12,8 +15,8 @@ interface IssueFormProps {
 export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState("Low");
-  const [state, setState] = useState("Todo");
+  const [priority, setPriority] = useState<IssuePriority>("Low");
+  const [state, setState] = useState<IssueState>("Todo");
 
   const handleCreate = async () => {
     try {
@@ -78,7 +81,7 @@ export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
 
             <select
               value={priority}
-              onChange={(e) => setPriority(e.target.value)}
+              onChange={(e) => setPriority(e.target.value as IssuePriority)}
               className="w-full rounded border p-2"
             >
               <option>Low</option>
@@ -95,7 +98,7 @@ export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
 
             <select
               value={state}
-              onChange={(e) => setState(e.target.value)}
+              onChange={(e) => setState(e.target.value as IssueState)}
               className="w-full rounded border p-2"
             >
               <option>Todo</option>

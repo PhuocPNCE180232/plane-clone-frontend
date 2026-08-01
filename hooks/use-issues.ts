@@ -82,6 +82,7 @@ export const useCreateIssueMutation = () => {
       const optimisticIssue: Issue = {
         ...newIssue,
         id: `temp-${Date.now()}`,
+        created_at: new Date().toISOString(),
         createdAt: new Date().toISOString(),
       };
 
@@ -144,14 +145,30 @@ export const useUpdateIssueMutation = () => {
       queryClient.setQueriesData<Issue[]>(
         { queryKey: issueKeys.lists() },
         (oldIssues = []) =>
-          oldIssues.map((issue) =>
-            issue.id === id ? { ...issue, ...data } : issue,
-          ),
+          oldIssues.map((issue) => {
+            if (issue.id !== id) return issue;
+
+            const nextIssue: Issue = {
+              ...issue,
+              ...data,
+              state: (data.state as Issue["state"]) ?? issue.state,
+              priority: (data.priority as Issue["priority"]) ?? issue.priority,
+            };
+
+            return nextIssue;
+          }),
       );
 
-      queryClient.setQueryData<Issue>(issueKeys.detail(id), (oldIssue) =>
-        oldIssue ? { ...oldIssue, ...data } : oldIssue,
-      );
+      queryClient.setQueryData<Issue>(issueKeys.detail(id), (oldIssue) => {
+        if (!oldIssue) return oldIssue;
+
+        return {
+          ...oldIssue,
+          ...data,
+          state: (data.state as Issue["state"]) ?? oldIssue.state,
+          priority: (data.priority as Issue["priority"]) ?? oldIssue.priority,
+        };
+      });
 
       return { previousIssueLists, previousIssue };
     },

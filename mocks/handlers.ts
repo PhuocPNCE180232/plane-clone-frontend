@@ -68,6 +68,7 @@ interface ModulePayload {
   name: string;
   description?: string;
   progress?: number;
+  status?: Module["status"];
 }
 
 interface CyclePayload {
@@ -125,7 +126,7 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
   const headers = new Headers(init?.headers);
   headers.set("Access-Control-Allow-Origin", "http://localhost:3000");
   headers.set("Access-Control-Allow-Credentials", "true");
-  return HttpResponse.json(body, { ...init, headers });
+  return HttpResponse.json(body as never, { ...init, headers });
 }
 
 // Helper to handle errors safely without 'any'
@@ -351,7 +352,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
         identifier: body.identifier,
         description: body.description || "",
         createdAt: new Date().toISOString(),
-        network: body.network || "public",
+        network: (body.network === "private" ? "private" : "public") as "public" | "private",
         status: "active",
       };
       mockProjects.push(newProject);
@@ -375,7 +376,11 @@ export const handlers: ReturnType<typeof http.all>[] = [
       if (index === -1)
         return jsonResponse({ error: "Project not found" }, { status: 404 });
 
-      mockProjects[index] = { ...mockProjects[index], ...body };
+      mockProjects[index] = {
+        ...mockProjects[index],
+        ...body,
+        network: body.network === "private" ? "private" : "public",
+      };
       saveToStorage("mockProjects", mockProjects);
 
       return jsonResponse(mockProjects[index]);
@@ -425,6 +430,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
         name: body.name,
         description: body.description || "",
         progress: body.progress ?? 0,
+        status: body.status ?? "Backlog",
       };
 
       mockModules.push(newModule);
@@ -648,6 +654,12 @@ export const handlers: ReturnType<typeof http.all>[] = [
       mockIssues[index] = {
         ...mockIssues[index],
         ...body,
+        state: (body.state === "Backlog" || body.state === "Todo" || body.state === "In Progress" || body.state === "Done" || body.state === "Cancelled"
+          ? body.state
+          : mockIssues[index].state) as "Backlog" | "Todo" | "In Progress" | "Done" | "Cancelled",
+        priority: (body.priority === "Urgent" || body.priority === "High" || body.priority === "Medium" || body.priority === "Low" || body.priority === "None"
+          ? body.priority
+          : mockIssues[index].priority) as "Urgent" | "High" | "Medium" | "Low" | "None",
       };
       saveToStorage("mockIssues", [...mockIssues]);
       return jsonResponse(JSON.parse(JSON.stringify(mockIssues[index])));

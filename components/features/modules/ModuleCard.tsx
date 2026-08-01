@@ -1,6 +1,10 @@
+"use client";
+
 import { MoreHorizontal, CircleDot, Clock, CheckCircle2 } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type MouseEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
+import Link from "next/link";
 import { mockIssues } from "@/mocks/db";
 import type { Module } from "@/lib/services/module.service";
 import { deleteModule, updateModule } from "@/lib/services/module.service";
@@ -40,7 +44,24 @@ export const ModuleCard = ({ module }: ModuleCardProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const queryClient = useQueryClient();
+  const params = useParams<{ workspaceSlug: string }>();
   const accent = accentFor(module.name);
+
+  const moduleIssues = mockIssues.filter((i) => i.module_id === module.id);
+  const total = moduleIssues.length;
+  const completed = moduleIssues.filter((i) => i.state === "Done").length;
+  const inProgress = moduleIssues.filter((i) => i.state === "In Progress").length;
+  const progressPct = module.progress ?? (total > 0 ? Math.round((completed / total) * 100) : 0);
+  const statusKey = module.status ?? (progressPct >= 100 ? "Completed" : progressPct > 0 ? "In Progress" : "Backlog");
+  const statusClasses: Record<string, string> = {
+    Backlog: "bg-slate-100 text-slate-600",
+    Planned: "bg-blue-100 text-blue-600",
+    "In Progress": "bg-amber-100 text-amber-600",
+    Paused: "bg-gray-100 text-gray-600",
+    Completed: "bg-emerald-100 text-emerald-600",
+    Cancelled: "bg-rose-100 text-rose-600",
+  };
+  const statusLabel = statusClasses[statusKey] ? statusKey : "Backlog";
 
   const { mutate: handleDeleteModule, isPending: isDeleting } = useMutation({
     mutationFn: () => deleteModule(module.id),
@@ -54,13 +75,6 @@ export const ModuleCard = ({ module }: ModuleCardProps) => {
       toast.error("Failed to delete module. Please try again.");
     },
   });
-
-  // Derive counts from mockIssues — read-only, no backend
-  const moduleIssues = mockIssues.filter((i) => i.module_id === module.id);
-  const total        = moduleIssues.length;
-  const completed    = moduleIssues.filter((i) => i.state === "Done").length;
-  const inProgress   = moduleIssues.filter((i) => i.state === "In Progress").length;
-  const progressPct  = module.progress ?? (total > 0 ? Math.round((completed / total) * 100) : 0);
 
   const onDelete = async () => {
     setIsMenuOpen(false);
@@ -76,17 +90,23 @@ export const ModuleCard = ({ module }: ModuleCardProps) => {
     }
   };
 
+  const handleMenuToggle = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsMenuOpen((current) => !current);
+  };
+
+  const handleMenuAction = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   return (
     <>
-      <div
-        className="
-          group relative flex flex-col
-          rounded-xl border border-gray-200 bg-white
-          p-4 shadow-sm
-          cursor-pointer
-          hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300
-          transition-all duration-200
-        "
+      <Link
+        href={params?.workspaceSlug ? `/${params.workspaceSlug}/modules/${module.id}` : '#'}
+        className={
+          `group relative flex flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300`}
       >
         {/* ── Top row: icon + title + ••• menu ──────────────────────── */}
         <div className="mb-2 flex items-center gap-2.5">
@@ -106,10 +126,7 @@ export const ModuleCard = ({ module }: ModuleCardProps) => {
           <div className="relative">
             <button
               type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                setIsMenuOpen((current) => !current);
-              }}
+              onClick={handleMenuToggle}
               className="
                 shrink-0 rounded p-1 text-gray-300
                 hover:bg-gray-100 hover:text-gray-600
@@ -124,7 +141,8 @@ export const ModuleCard = ({ module }: ModuleCardProps) => {
               <div className="absolute right-0 top-full mt-2 w-40 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl z-20">
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={(e) => {
+                    handleMenuAction(e);
                     setIsEditOpen(true);
                     setIsMenuOpen(false);
                   }}
@@ -134,7 +152,10 @@ export const ModuleCard = ({ module }: ModuleCardProps) => {
                 </button>
                 <button
                   type="button"
-                  onClick={onDelete}
+                  onClick={(e) => {
+                    handleMenuAction(e);
+                    onDelete();
+                  }}
                   disabled={isDeleting}
                   className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-red-600 hover:bg-gray-50 disabled:opacity-50"
                 >
@@ -146,9 +167,15 @@ export const ModuleCard = ({ module }: ModuleCardProps) => {
         </div>
 
       {/* ── Description ───────────────────────────────────────────── */}
-      <p className="mb-3 text-[11px] leading-relaxed text-gray-400 line-clamp-2">
+      <p className="mb-2 text-[11px] leading-relaxed text-gray-400 line-clamp-2">
         {module.description}
       </p>
+
+      <div className="mb-3">
+        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-medium ${statusClasses[statusKey] ?? "bg-slate-100 text-slate-600"}`}>
+          {statusLabel}
+        </span>
+      </div>
 
       {/* ── Progress ──────────────────────────────────────────────── */}
       <div className="mb-3">
@@ -183,7 +210,7 @@ export const ModuleCard = ({ module }: ModuleCardProps) => {
           2h ago
         </span>
       </div>
-    </div>
+      </Link>
 
     {isEditOpen && (
       <ModuleEditModal
@@ -210,6 +237,8 @@ const ModuleEditModal = ({
   const [description, setDescription] = useState(module.description ?? "");
   const [startDate, setStartDate] = useState(module.start_date ?? "");
   const [endDate, setEndDate] = useState(module.end_date ?? "");
+  const [status, setStatus] = useState<NonNullable<Module["status"]>>(module.status ?? "Backlog");
+  const statusOptions: NonNullable<Module["status"]>[] = ["Backlog", "Planned", "In Progress", "Paused", "Completed", "Cancelled"];
 
   const { mutate: handleUpdateModule, isPending } = useMutation({
     mutationFn: () =>
@@ -218,6 +247,7 @@ const ModuleEditModal = ({
         description,
         start_date: startDate,
         end_date: endDate,
+        status,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["modules"] });
@@ -232,7 +262,7 @@ const ModuleEditModal = ({
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const validation = createModuleSchema.safeParse({ title, description, startDate, endDate });
+    const validation = createModuleSchema.safeParse({ title, description, startDate, endDate, status });
     if (!validation.success) {
       const first = validation.error.issues[0];
       toast.warning(first.message || "Validation error");
@@ -302,6 +332,21 @@ const ModuleEditModal = ({
               />
             </label>
           </div>
+
+          <label className="block">
+            <span className="text-sm font-medium text-gray-700">Status</span>
+            <select
+              value={status}
+              onChange={(event) => setStatus(event.target.value as NonNullable<Module["status"]>)}
+              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-black"
+            >
+              {statusOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
 
           <div className="flex justify-end gap-3">
             <button
