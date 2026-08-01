@@ -31,7 +31,11 @@ export interface CreateIssuePayload {
   state: string;
   priority: string;
   assignee_id: string | null;
+  module_id?: string | null;
+  cycle_id?: string | null;
 }
+
+export type CreateIssueDto = CreateIssuePayload;
 
 /** All fields are optional on update (partial edit). */
 export type UpdateIssueDto = Partial<CreateIssuePayload>;

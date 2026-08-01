@@ -45,6 +45,9 @@ export const QuickGuide = () => {
   const handleAction = (action: string) => {
     if (action === "create_project") {
       setIsCreateProjectModalOpen(true);
+    } else if (action === "invite_team") {
+      const slug = params?.workspaceSlug;
+      if (slug) router.push(`/${slug}/members`);
     } else if (action === "setup_workspace") {
       const slug = params?.workspaceSlug;
       if (slug) router.push(`/${slug}/settings`);

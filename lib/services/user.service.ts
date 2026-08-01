@@ -1,5 +1,5 @@
 // Import apiClient Axios instance
-import apiClient from "@/lib/api/client"; 
+import { apiClient } from "@/lib/api/client"; 
 
 export const userService = {
   // 1. Lấy danh sách tất cả users để map ID sang Tên

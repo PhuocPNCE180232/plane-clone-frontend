@@ -12,7 +12,13 @@ import {
   Boxes,
   RefreshCw,
   MoreHorizontal,
+  Users,
+  FileText,
+  Bell,
+  MessageSquare,
+  CircleHelp,
 } from "lucide-react";
+import { useAppStore } from "@/hooks/use-app-store";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 
 // ─── Nav item type ────────────────────────────────────────────────────────────
@@ -26,8 +32,9 @@ type NavItem = {
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 export const Sidebar = () => {
-  const pathname  = usePathname();
-  const params    = useParams();
+  const pathname         = usePathname();
+  const params           = useParams();
+  const activeProjectId  = useAppStore((state) => state.activeProjectId);
 
   // Read the real workspaceSlug from URL params.
   // Falls back to the literal "workspaceSlug" so existing routes continue
@@ -48,6 +55,15 @@ export const Sidebar = () => {
     { icon: <CircleDot  className="h-4 w-4" />, title: "Work Items", href: `/${slug}/issues`   },
     { icon: <Boxes      className="h-4 w-4" />, title: "Modules",    href: `/${slug}/modules`  },
     { icon: <RefreshCw  className="h-4 w-4" />, title: "Cycles",     href: `/${slug}/cycles`   },
+    { icon: <Users      className="h-4 w-4" />, title: "Members",    href: `/${slug}/members`  },
+    { icon: <Bell       className="h-4 w-4" />, title: "Inbox",      href: `/${slug}/inbox`    },
+    { icon: <MessageSquare className="h-4 w-4" />, title: "Community", href: `/${slug}/community` },
+    { icon: <CircleHelp className="h-4 w-4" />, title: "Question", href: `/${slug}/questions` },
+    // Pages is project-scoped — only shown when a project is active.
+    ...(activeProjectId
+      ? [{ icon: <FileText className="h-4 w-4" />, title: "Pages", href: `/${slug}/projects/${activeProjectId}/pages` }]
+      : []
+    ),
   ];
 
   // ── Active check ─────────────────────────────────────────────────────────

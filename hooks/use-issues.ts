@@ -72,21 +72,23 @@ export const useCreateIssueMutation = () => {
 
     onMutate: async (newIssue) => {
       await queryClient.cancelQueries({
-        queryKey: issueKeys.list(newIssue.projectId),
+        queryKey: issueKeys.list(newIssue.project_id),
       });
 
       const previousIssues = queryClient.getQueryData<Issue[]>(
-        issueKeys.list(newIssue.projectId),
+        issueKeys.list(newIssue.project_id),
       );
 
       const optimisticIssue: Issue = {
         ...newIssue,
+        module_id: newIssue.module_id || null,
+        cycle_id: newIssue.cycle_id || null,
         id: `temp-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-      };
+        created_at: new Date().toISOString(),
+      } as Issue;
 
       queryClient.setQueryData<Issue[]>(
-        issueKeys.list(newIssue.projectId),
+        issueKeys.list(newIssue.project_id),
         (oldIssues = []) => [optimisticIssue, ...oldIssues],
       );
 
@@ -96,7 +98,7 @@ export const useCreateIssueMutation = () => {
     onError: (_error, newIssue, context) => {
       if (context?.previousIssues) {
         queryClient.setQueryData(
-          issueKeys.list(newIssue.projectId),
+          issueKeys.list(newIssue.project_id),
           context.previousIssues,
         );
       }
@@ -104,7 +106,7 @@ export const useCreateIssueMutation = () => {
 
     onSuccess: (createdIssue, _newIssue, context) => {
       queryClient.setQueryData<Issue[]>(
-        issueKeys.list(createdIssue.projectId),
+        issueKeys.list(createdIssue.project_id),
         (oldIssues = []) =>
           oldIssues.map((issue) =>
             issue.id === context.optimisticIssue.id ? createdIssue : issue,
@@ -116,7 +118,7 @@ export const useCreateIssueMutation = () => {
 
     onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({
-        queryKey: issueKeys.list(variables.projectId),
+        queryKey: issueKeys.list(variables.project_id),
       });
     },
   });
@@ -145,12 +147,12 @@ export const useUpdateIssueMutation = () => {
         { queryKey: issueKeys.lists() },
         (oldIssues = []) =>
           oldIssues.map((issue) =>
-            issue.id === id ? { ...issue, ...data } : issue,
+            issue.id === id ? ({ ...issue, ...data } as Issue) : issue,
           ),
       );
 
       queryClient.setQueryData<Issue>(issueKeys.detail(id), (oldIssue) =>
-        oldIssue ? { ...oldIssue, ...data } : oldIssue,
+        oldIssue ? ({ ...oldIssue, ...data } as Issue) : oldIssue,
       );
 
       return { previousIssueLists, previousIssue };

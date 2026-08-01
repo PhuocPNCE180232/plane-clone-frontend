@@ -22,14 +22,19 @@ import {
   mockPages,
   mockViews,
   mockNotifications,
+  mockCommunityPosts,
+  mockQuestions,
   User,
   Workspace,
   Project,
+  Issue,
   Module,
   Member,
   Page,
   CustomView,
   Notification,
+  CommunityPost,
+  Question,
   // -----------------------------------
   saveToStorage,
 } from "./db";
@@ -106,7 +111,7 @@ interface MemberPayload {
 }
 
 interface PagePayload {
-  name: string;
+  name?: string;
   content?: string;
 }
 
@@ -118,6 +123,21 @@ interface ViewPayload {
 interface InboxPayload {
   is_read: boolean;
 }
+
+interface CommunityPostPayload {
+  content: string;
+  workspace_id?: string;
+  author?: string;
+  avatar?: string;
+}
+
+interface QuestionPayload {
+  title: string;
+  description: string;
+  workspace_id?: string;
+  author?: string;
+  avatar?: string;
+}
 // ---------------------------------------
 
 // Helper to wrap all JSON responses with CORS headers
@@ -125,7 +145,7 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
   const headers = new Headers(init?.headers);
   headers.set("Access-Control-Allow-Origin", "http://localhost:3000");
   headers.set("Access-Control-Allow-Credentials", "true");
-  return HttpResponse.json(body, { ...init, headers });
+  return HttpResponse.json(body as any, { ...init, headers });
 }
 
 // Helper to handle errors safely without 'any'
@@ -351,7 +371,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
         identifier: body.identifier,
         description: body.description || "",
         createdAt: new Date().toISOString(),
-        network: body.network || "public",
+        network: (body.network as "public" | "private") || "public",
         status: "active",
       };
       mockProjects.push(newProject);
@@ -375,7 +395,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
       if (index === -1)
         return jsonResponse({ error: "Project not found" }, { status: 404 });
 
-      mockProjects[index] = { ...mockProjects[index], ...body };
+      mockProjects[index] = { ...mockProjects[index], ...body } as Project;
       saveToStorage("mockProjects", mockProjects);
 
       return jsonResponse(mockProjects[index]);
@@ -648,7 +668,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
       mockIssues[index] = {
         ...mockIssues[index],
         ...body,
-      };
+      } as Issue;
       saveToStorage("mockIssues", [...mockIssues]);
       return jsonResponse(JSON.parse(JSON.stringify(mockIssues[index])));
     } catch (e: unknown) {
@@ -805,7 +825,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
         const body = (await request.json()) as MemberPayload;
 
         const newMember: Member = {
-          id: `mem-${Date.now()}`,
+          id: `mem-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           workspace_id: workspace_id as string,
           email: body.email,
           role: body.role || "member",
@@ -857,6 +877,22 @@ export const handlers: ReturnType<typeof http.all>[] = [
     },
   ),
 
+  http.get(
+    `${BASE}/projects/:project_id/pages/:id`,
+    async ({ request, params }) => {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const { id } = params;
+      const page = mockPages.find((p) => p.id === id);
+      if (!page)
+        return jsonResponse({ error: "Page not found" }, { status: 404 });
+
+      return jsonResponse(page);
+    },
+  ),
+
   http.post(
     `${BASE}/projects/:project_id/pages`,
     async ({ request, params }) => {
@@ -867,11 +903,13 @@ export const handlers: ReturnType<typeof http.all>[] = [
 
         const { project_id } = params;
         const body = (await request.json()) as PagePayload;
+        if (!body.name?.trim())
+          return jsonResponse({ error: "Page name is required" }, { status: 400 });
 
         const newPage: Page = {
-          id: `page-${Date.now()}`,
+          id: `page-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           project_id: project_id as string,
-          name: body.name,
+          name: body.name.trim(),
           content: body.content || "",
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -908,35 +946,387 @@ export const handlers: ReturnType<typeof http.all>[] = [
     },
   ),
 
-  // --- INBOX / NOTIFICATIONS (GET, PATCH) ---
+  http.patch(
+    `${BASE}/projects/:project_id/pages/:id`,
+    async ({ request, params }) => {
+      try {
+        const { id } = params;
+        const sessionId = getSessionId(request);
+        if (!sessionId)
+          return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+        const index = mockPages.findIndex((p) => p.id === id);
+        if (index === -1)
+          return jsonResponse({ error: "Page not found" }, { status: 404 });
+
+        const body = (await request.json()) as PagePayload;
+        // Require at least one updatable field — same guard pattern as POST.
+        if (!body.name?.trim() && body.content === undefined)
+          return jsonResponse({ error: "At least one field (name or content) is required" }, { status: 400 });
+
+        mockPages[index] = {
+          ...mockPages[index],
+          ...(body.name?.trim()        ? { name: body.name.trim() }  : {}),
+          ...(body.content !== undefined ? { content: body.content } : {}),
+          updated_at: new Date().toISOString(),
+        };
+        saveToStorage("mockPages", mockPages);
+
+        return jsonResponse(mockPages[index]);
+      } catch (e: unknown) {
+        return handleError(e, "PATCH /pages/:id");
+      }
+    },
+  ),
+
+  // --- INBOX / NOTIFICATIONS (GET, PATCH read-all, PATCH :id/read, DELETE :id) ---
+
   http.get(`${BASE}/inbox`, async ({ request }) => {
     const sessionId = getSessionId(request);
     if (!sessionId)
       return jsonResponse({ error: "Unauthorized" }, { status: 401 });
-
-    // Trả về noti của user hiện tại
-    const userNotifs = mockNotifications.filter((n) => n.user_id === sessionId);
-    return jsonResponse(userNotifs);
+    // Return all notifications — no user-id filtering (workspace-level inbox).
+    return jsonResponse(mockNotifications);
   }),
 
-  http.patch(`${BASE}/inbox/:id`, async ({ request, params }) => {
+  // read-all registered before /:id/read so the literal "read-all" is not
+  // swallowed by a dynamic /:id segment.
+  http.patch(`${BASE}/inbox/read-all`, async ({ request }) => {
+    try {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      mockNotifications.forEach((n) => { n.is_read = true; });
+      saveToStorage("mockNotifications", mockNotifications);
+      return jsonResponse({ success: true });
+    } catch (e: unknown) {
+      return handleError(e, "PATCH /inbox/read-all");
+    }
+  }),
+
+  http.patch(`${BASE}/inbox/:id/read`, async ({ request, params }) => {
     try {
       const sessionId = getSessionId(request);
       if (!sessionId)
         return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
       const { id } = params;
-      const body = (await request.json()) as InboxPayload;
-
       const index = mockNotifications.findIndex((n) => n.id === id);
-      if (index > -1) {
-        mockNotifications[index].is_read = body.is_read;
-        saveToStorage("mockNotifications", mockNotifications);
-        return jsonResponse(mockNotifications[index]);
-      }
-      return jsonResponse({ error: "Not found" }, { status: 404 });
+      if (index === -1)
+        return jsonResponse({ error: "Not found" }, { status: 404 });
+
+      mockNotifications[index].is_read = true;
+      saveToStorage("mockNotifications", mockNotifications);
+      return jsonResponse(mockNotifications[index]);
     } catch (e: unknown) {
-      return handleError(e, "PATCH /inbox");
+      return handleError(e, "PATCH /inbox/:id/read");
+    }
+  }),
+
+  http.delete(`${BASE}/inbox/:id`, async ({ request, params }) => {
+    try {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const { id } = params;
+      const index = mockNotifications.findIndex((n) => n.id === id);
+      if (index === -1)
+        return jsonResponse({ error: "Not found" }, { status: 404 });
+
+      mockNotifications.splice(index, 1);
+      saveToStorage("mockNotifications", mockNotifications);
+      return jsonResponse({ success: true });
+    } catch (e: unknown) {
+      return handleError(e, "DELETE /inbox/:id");
+    }
+  }),
+
+  // --- COMMUNITY (GET, POST, DELETE) ---
+  http.get(`${BASE}/community`, async ({ request }) => {
+    const sessionId = getSessionId(request);
+    if (!sessionId)
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+    return jsonResponse(mockCommunityPosts);
+  }),
+
+  http.post(`${BASE}/community`, async ({ request }) => {
+    try {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const body = (await request.json()) as CommunityPostPayload;
+      if (!body.content?.trim())
+        return jsonResponse({ error: "Post content is required" }, { status: 400 });
+
+      // Lookup user name & avatar if available
+      const currentUser = mockUsers.find((u) => u.id === sessionId);
+
+      const newPost: CommunityPost = {
+        id: `post-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        workspace_id: body.workspace_id || "w1",
+        author: body.author || currentUser?.name || "Phước (Lead)",
+        avatar: body.avatar || currentUser?.avatar || "https://i.pravatar.cc/150?u=u1",
+        content: body.content.trim(),
+        created_at: new Date().toISOString(),
+        likes: 0,
+        liked: false,
+        comments: [],
+      };
+
+      mockCommunityPosts.unshift(newPost);
+      saveToStorage("mockCommunityPosts", mockCommunityPosts);
+      return jsonResponse(newPost, { status: 201 });
+    } catch (e: unknown) {
+      return handleError(e, "POST /community");
+    }
+  }),
+
+  http.patch(`${BASE}/community/:id/like`, async ({ request, params }) => {
+    try {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const { id } = params;
+      const index = mockCommunityPosts.findIndex((p) => p.id === id);
+      if (index === -1)
+        return jsonResponse({ error: "Post not found" }, { status: 404 });
+
+      const post = mockCommunityPosts[index];
+      const newLiked = !post.liked;
+      const newLikes = newLiked ? post.likes + 1 : Math.max(0, post.likes - 1);
+
+      mockCommunityPosts[index] = {
+        ...post,
+        liked: newLiked,
+        likes: newLikes,
+      };
+
+      saveToStorage("mockCommunityPosts", mockCommunityPosts);
+      return jsonResponse(mockCommunityPosts[index]);
+    } catch (e: unknown) {
+      return handleError(e, "PATCH /community/:id/like");
+    }
+  }),
+
+  http.post(`${BASE}/community/:id/comments`, async ({ request, params }) => {
+    try {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const { id } = params;
+      const index = mockCommunityPosts.findIndex((p) => p.id === id);
+      if (index === -1)
+        return jsonResponse({ error: "Post not found" }, { status: 404 });
+
+      const body = (await request.json()) as { content?: string; author?: string; avatar?: string };
+      if (!body.content?.trim())
+        return jsonResponse({ error: "Comment content is required" }, { status: 400 });
+
+      const currentUser = mockUsers.find((u) => u.id === sessionId);
+
+      const newComment = {
+        id: `comment-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        author: body.author || currentUser?.name || "Phước (Lead)",
+        avatar: body.avatar || currentUser?.avatar || "https://i.pravatar.cc/150?u=u1",
+        content: body.content.trim(),
+        created_at: new Date().toISOString(),
+      };
+
+      mockCommunityPosts[index].comments.push(newComment);
+      saveToStorage("mockCommunityPosts", mockCommunityPosts);
+      return jsonResponse(mockCommunityPosts[index], { status: 201 });
+    } catch (e: unknown) {
+      return handleError(e, "POST /community/:id/comments");
+    }
+  }),
+
+  http.delete(
+    `${BASE}/community/:id/comments/:commentId`,
+    async ({ request, params }) => {
+      try {
+        const sessionId = getSessionId(request);
+        if (!sessionId)
+          return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+        const { id, commentId } = params;
+        const postIndex = mockCommunityPosts.findIndex((p) => p.id === id);
+        if (postIndex === -1)
+          return jsonResponse({ error: "Post not found" }, { status: 404 });
+
+        const commentIndex = mockCommunityPosts[postIndex].comments.findIndex(
+          (c) => c.id === commentId
+        );
+        if (commentIndex === -1)
+          return jsonResponse({ error: "Comment not found" }, { status: 404 });
+
+        mockCommunityPosts[postIndex].comments.splice(commentIndex, 1);
+        saveToStorage("mockCommunityPosts", mockCommunityPosts);
+        return jsonResponse({ success: true });
+      } catch (e: unknown) {
+        return handleError(e, "DELETE /community/:id/comments/:commentId");
+      }
+    }
+  ),
+
+  http.delete(`${BASE}/community/:id`, async ({ request, params }) => {
+    try {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const { id } = params;
+      const index = mockCommunityPosts.findIndex((p) => p.id === id);
+      if (index === -1)
+        return jsonResponse({ error: "Post not found" }, { status: 404 });
+
+      mockCommunityPosts.splice(index, 1);
+      saveToStorage("mockCommunityPosts", mockCommunityPosts);
+      return jsonResponse({ success: true });
+    } catch (e: unknown) {
+      return handleError(e, "DELETE /community/:id");
+    }
+  }),
+
+  // --- QUESTIONS (GET, POST, DELETE) ---
+  http.get(`${BASE}/questions`, async ({ request }) => {
+    const sessionId = getSessionId(request);
+    if (!sessionId)
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+    return jsonResponse(mockQuestions);
+  }),
+
+  http.get(`${BASE}/questions/:id`, async ({ request, params }) => {
+    const sessionId = getSessionId(request);
+    if (!sessionId)
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+    const { id } = params;
+    const question = mockQuestions.find((q) => q.id === id);
+    if (!question)
+      return jsonResponse({ error: "Question not found" }, { status: 404 });
+
+    return jsonResponse(question);
+  }),
+
+  http.post(`${BASE}/questions`, async ({ request }) => {
+    try {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const body = (await request.json()) as QuestionPayload;
+      if (!body.title?.trim())
+        return jsonResponse({ error: "Question title is required" }, { status: 400 });
+
+      const currentUser = mockUsers.find((u) => u.id === sessionId);
+
+      const newQuestion: Question = {
+        id: `q-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        workspace_id: body.workspace_id || "w1",
+        title: body.title.trim(),
+        description: body.description?.trim() || "",
+        author: body.author || currentUser?.name || "Phước (Lead)",
+        avatar: body.avatar || currentUser?.avatar || "https://i.pravatar.cc/150?u=u1",
+        created_at: new Date().toISOString(),
+        answers: [],
+      };
+
+      mockQuestions.unshift(newQuestion);
+      saveToStorage("mockQuestions", mockQuestions);
+      return jsonResponse(newQuestion, { status: 201 });
+    } catch (e: unknown) {
+      return handleError(e, "POST /questions");
+    }
+  }),
+
+  http.post(`${BASE}/questions/:id/answers`, async ({ request, params }) => {
+    try {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const { id } = params;
+      const index = mockQuestions.findIndex((q) => q.id === id);
+      if (index === -1)
+        return jsonResponse({ error: "Question not found" }, { status: 404 });
+
+      const body = (await request.json()) as { content?: string; author?: string; avatar?: string };
+      if (!body.content?.trim())
+        return jsonResponse({ error: "Answer content is required" }, { status: 400 });
+
+      const currentUser = mockUsers.find((u) => u.id === sessionId);
+
+      const newAnswer = {
+        id: `answer-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        question_id: id as string,
+        author: body.author || currentUser?.name || "Phước (Lead)",
+        avatar: body.avatar || currentUser?.avatar || "https://i.pravatar.cc/150?u=u1",
+        content: body.content.trim(),
+        created_at: new Date().toISOString(),
+      };
+
+      if (!mockQuestions[index].answers) {
+        mockQuestions[index].answers = [];
+      }
+      mockQuestions[index].answers.push(newAnswer);
+      saveToStorage("mockQuestions", mockQuestions);
+      return jsonResponse(mockQuestions[index], { status: 201 });
+    } catch (e: unknown) {
+      return handleError(e, "POST /questions/:id/answers");
+    }
+  }),
+
+  http.delete(
+    `${BASE}/questions/:id/answers/:answerId`,
+    async ({ request, params }) => {
+      try {
+        const sessionId = getSessionId(request);
+        if (!sessionId)
+          return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+        const { id, answerId } = params;
+        const qIndex = mockQuestions.findIndex((q) => q.id === id);
+        if (qIndex === -1)
+          return jsonResponse({ error: "Question not found" }, { status: 404 });
+
+        const ansIndex = (mockQuestions[qIndex].answers || []).findIndex(
+          (a) => a.id === answerId
+        );
+        if (ansIndex === -1)
+          return jsonResponse({ error: "Answer not found" }, { status: 404 });
+
+        mockQuestions[qIndex].answers.splice(ansIndex, 1);
+        saveToStorage("mockQuestions", mockQuestions);
+        return jsonResponse({ success: true });
+      } catch (e: unknown) {
+        return handleError(e, "DELETE /questions/:id/answers/:answerId");
+      }
+    }
+  ),
+
+  http.delete(`${BASE}/questions/:id`, async ({ request, params }) => {
+    try {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const { id } = params;
+      const index = mockQuestions.findIndex((q) => q.id === id);
+      if (index === -1)
+        return jsonResponse({ error: "Question not found" }, { status: 404 });
+
+      mockQuestions.splice(index, 1);
+      saveToStorage("mockQuestions", mockQuestions);
+      return jsonResponse({ success: true });
+    } catch (e: unknown) {
+      return handleError(e, "DELETE /questions/:id");
     }
   }),
 
@@ -1023,4 +1413,63 @@ export const handlers: ReturnType<typeof http.all>[] = [
       }
     },
   ),
+
+  // --- MEMBERS ---
+  http.get(`${BASE}/members`, async ({ request }) => {
+    const sessionId = getSessionId(request);
+    if (!sessionId)
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    return jsonResponse(mockMembers);
+  }),
+
+  http.post(`${BASE}/members`, async ({ request }) => {
+    try {
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const body = (await request.json()) as MemberPayload;
+
+      if (!body.email || !body.role)
+        return jsonResponse({ error: "Email and role are required" }, { status: 400 });
+
+      const duplicate = mockMembers.find((m) => m.email === body.email);
+      if (duplicate)
+        return jsonResponse({ error: "This email is already a member of the workspace" }, { status: 400 });
+
+      const newMember: Member = {
+        id: `mem-${Date.now()}`,
+        workspace_id: mockWorkspaces[0]?.id ?? "w1",
+        email: body.email,
+        role: body.role,
+        joined_at: new Date().toISOString(),
+      };
+      mockMembers.push(newMember);
+      saveToStorage("mockMembers", mockMembers);
+
+      return jsonResponse(newMember, { status: 201 });
+    } catch (e: unknown) {
+      return handleError(e, "POST /members");
+    }
+  }),
+
+  http.delete(`${BASE}/members/:id`, async ({ request, params }) => {
+    try {
+      const { id } = params;
+      const sessionId = getSessionId(request);
+      if (!sessionId)
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+      const index = mockMembers.findIndex((m) => m.id === id);
+      if (index === -1)
+        return jsonResponse({ error: "Member not found" }, { status: 404 });
+
+      mockMembers.splice(index, 1);
+      saveToStorage("mockMembers", mockMembers);
+
+      return jsonResponse({ success: true });
+    } catch (e: unknown) {
+      return handleError(e, "DELETE /members/:id");
+    }
+  }),
 ];
