@@ -8,7 +8,9 @@ import { mockIssues } from "@/mocks/db";
 import { useQuery } from "@tanstack/react-query";
 import { getCycles, type Cycle } from "@/lib/services/cycle.service";
 
-export const CycleList = () => {
+type CycleFilterStatus = "all" | "active" | "upcoming" | "completed";
+
+export const CycleList = ({ filterStatus }: { filterStatus: CycleFilterStatus }) => {
   const { data: cycles = [], isLoading } = useQuery<Cycle[], Error>({
     queryKey: ["cycles"],
     queryFn: getCycles,
@@ -41,9 +43,13 @@ export const CycleList = () => {
 
   return (
     <div className="space-y-8">
-      <ActiveSection cycles={cycles} />
-      <CycleSection cycles={cycles} label="Upcoming Cycles" status="upcoming" />
-      <CycleSection cycles={cycles} label="Completed Cycles" status="completed" />
+      {(filterStatus === "all" || filterStatus === "active") && <ActiveSection cycles={cycles} />}
+      {(filterStatus === "all" || filterStatus === "upcoming") && (
+        <CycleSection cycles={cycles} label="Upcoming Cycles" status="upcoming" />
+      )}
+      {(filterStatus === "all" || filterStatus === "completed") && (
+        <CycleSection cycles={cycles} label="Completed Cycles" status="completed" />
+      )}
     </div>
   );
 };

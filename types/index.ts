@@ -3,7 +3,6 @@ export interface User {
   email: string;
   name: string;
   avatar?: string;
-  avatarUrl?: string;
 }
 
 export interface Workspace {
@@ -29,33 +28,23 @@ export interface Project {
 export interface Issue {
   id: string;
   project_id: string;
-
   title: string;
   description: string;
-
-  state:
-    | "Backlog"
-    | "Todo"
-    | "In Progress"
-    | "Done"
-    | "Cancelled";
-
-  priority:
-    | "Urgent"
-    | "High"
-    | "Medium"
-    | "Low"
-    | "None";
-
+  state: "Backlog" | "Todo" | "In Progress" | "Done" | "Cancelled";
+  priority: "Urgent" | "High" | "Medium" | "Low" | "None";
   assignee_id: string | null;
   module_id: string | null;
   cycle_id: string | null;
-
   labels?: string[];
-
   start_date?: string | null;
-
   due_date?: string | null;
+  created_at: string;
+}
 
+export interface Comment {
+  id: string;
+  issue_id: string;
+  user_id: string;
+  content: string;
   created_at: string;
 }

@@ -29,31 +29,31 @@ export interface CreateIssuePayload {
   project_id: string;
   title: string;
   description: string;
-
-  state: string;
-  priority: string;
-
+  state: "Backlog" | "Todo" | "In Progress" | "Done" | "Cancelled";
+  priority: "Urgent" | "High" | "Medium" | "Low" | "None";
   assignee_id: string | null;
   module_id: string | null;
   cycle_id: string | null;
-
   labels?: string[];
-
   start_date?: string | null;
-
   due_date?: string | null;
 }
 
+export type CreateIssueDto = CreateIssuePayload;
+
 /** All fields are optional on update (partial edit). */
-export type UpdateIssueDto = Partial<CreateIssuePayload>;
+export type UpdateIssueDto = Partial<
+  Omit<CreateIssuePayload, "state" | "priority">
+> & {
+  state?: "Backlog" | "Todo" | "In Progress" | "Done" | "Cancelled";
+  priority?: "Urgent" | "High" | "Medium" | "Low" | "None";
+};
 
 // ─── Service functions ─────────────────────────────────────────────────────
 
 /** Returns all issues the current user can access. */
 export const getIssues = (project_id?: string): Promise<Issue[]> =>
-  get<Issue[]>(
-    project_id ? `/issues?project_id=${project_id}` : "/issues"
-  );
+  get<Issue[]>(project_id ? `/issues?project_id=${project_id}` : "/issues");
 
 /** Returns a single issue by its ID. */
 export const getIssueById = (id: string): Promise<Issue> =>
@@ -64,17 +64,12 @@ export const createIssue = (data: CreateIssuePayload): Promise<Issue> =>
   post<Issue, CreateIssuePayload>("/issues", data);
 
 /** Partially updates an issue and returns the updated resource. */
-export const updateIssue = (
-  id: string,
-  data: UpdateIssueDto
-): Promise<Issue> =>
+export const updateIssue = (id: string, data: UpdateIssueDto): Promise<Issue> =>
   patch<Issue, UpdateIssueDto>(`/issues/${id}`, data);
 
 /** Deletes an issue. Most backends return 204 No Content. */
 export const deleteIssue = (id: string): Promise<void> =>
   del<void>(`/issues/${id}`);
 
-export const getCommentsByIssueId = (
-  issueId: string
-): Promise<Comment[]> =>
+export const getCommentsByIssueId = (issueId: string): Promise<Comment[]> =>
   get<Comment[]>(`/issues/${issueId}/comments`);

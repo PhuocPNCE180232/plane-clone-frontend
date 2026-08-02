@@ -83,6 +83,7 @@ export interface Module {
   name: string;
   description: string;
   progress?: number; 
+  status?: "Backlog" | "Planned" | "In Progress" | "Paused" | "Completed" | "Cancelled";
   start_date?: string;
   end_date?: string;
 }
@@ -318,7 +319,8 @@ const defaultModules: Module[] = [
     project_id: "p1",
     name: "Auth & User",
     description: "Tính năng đăng nhập và quản lý user",
-    progress: 55,
+    progress: 0,
+    status: "Backlog",
     start_date: "2026-06-29",
     end_date: "2026-07-05",
   },
@@ -328,6 +330,7 @@ const defaultModules: Module[] = [
     name: "Core Features",
     description: "Các tính năng Kanban, Issue",
     progress: 35,
+    status: "In Progress",
     start_date: "2026-07-06",
     end_date: "2026-07-12",
   },
@@ -336,7 +339,8 @@ const defaultModules: Module[] = [
     project_id: "p1",
     name: "UI Components",
     description: "Các thành phần giao diện",
-    progress: 70,
+    progress: 100,
+    status: "Completed",
     start_date: "2026-06-15",
     end_date: "2026-06-30",
   },
@@ -416,7 +420,16 @@ const defaultIssues: Issue[] = [
   },
 ];
 
-export let mockIssues: Issue[] = loadFromStorage("mockIssues", defaultIssues);
+const storedIssues = loadFromStorage<Issue[]>("mockIssues", defaultIssues);
+const issueMap = new Map(storedIssues.map((issue) => [issue.id, issue]));
+
+defaultIssues.forEach((issue) => {
+  if (!issueMap.has(issue.id)) {
+    issueMap.set(issue.id, issue);
+  }
+});
+
+export let mockIssues: Issue[] = Array.from(issueMap.values());
 
 if (isBrowser) {
   saveToStorage("mockIssues", mockIssues);

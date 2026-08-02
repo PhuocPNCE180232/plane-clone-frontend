@@ -1,0 +1,81 @@
+"use client";
+
+import { useState } from "react";
+import { useParams, usePathname } from "next/navigation";
+import { ChevronRight } from "lucide-react";
+import IssueBoard from "@/components/features/issues/board/IssueBoard";
+import { IssueHeader } from "@/components/features/issues/IssueHeader";
+import { IssueToolbar } from "@/components/features/issues/IssueToolbar";
+import { IssueTable } from "@/components/features/issues/IssueTable";
+import { mockIssues, mockModules } from "@/mocks/db";
+
+interface ModuleWorkItemProps {
+  moduleId: string;
+}
+
+export const ModuleWorkItem = ({ moduleId }: ModuleWorkItemProps) => {
+  const [view, setView] = useState<"list" | "board">("list");
+  const [reloadKey, setReloadKey] = useState(0);
+  const params = useParams();
+  const pathname = usePathname();
+  // Determine effective module id (prop preferred, fall back to client params)
+  const effectiveModuleId = moduleId ?? params?.moduleId ?? "";
+
+  const selectedModule = mockModules.find((item) => item.id === effectiveModuleId);
+  const issues = mockIssues.filter((issue) => {
+    void reloadKey;
+    return issue.module_id === effectiveModuleId;
+  });
+
+  const reloadIssues = () => setReloadKey((current) => current + 1);
+
+  
+
+  return (
+    <>
+      <div className="mb-4 flex items-center gap-1.5 text-sm text-gray-500">
+        <span className="cursor-pointer transition-colors hover:text-gray-900">
+          Plane Clone
+        </span>
+        <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+        <span className="cursor-pointer transition-colors hover:text-gray-900">
+          Modules
+        </span>
+        <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+        <span className="font-medium text-gray-900">All Work Items</span>
+      </div>
+
+      <IssueHeader />
+
+      
+
+      <div className="mb-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-gray-500">
+              Module details
+            </p>
+            <p className="mt-1 text-sm font-medium text-gray-900">
+              {selectedModule?.name ?? "Unknown module"}
+            </p>
+          </div>
+          <div className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+            {issues.length} {issues.length === 1 ? "work item" : "work items"}
+          </div>
+        </div>
+        <p className="mt-3 text-sm text-gray-500">
+          {selectedModule?.description ??
+            "This page displays all work items assigned to the selected module."}
+        </p>
+      </div>
+
+      <IssueToolbar view={view} setView={setView} onCreated={reloadIssues} />
+
+      {view === "list" ? (
+        <IssueTable issues={issues} />
+      ) : (
+        <IssueBoard issues={issues} reload={reloadIssues} />
+      )}
+    </>
+  );
+};

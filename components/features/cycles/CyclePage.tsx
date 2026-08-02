@@ -1,8 +1,15 @@
+"use client";
+
+import { useState } from "react";
 import { CycleHeader } from "./CycleHeader";
 import { CycleList } from "./CycleList";
 import { ChevronRight } from "lucide-react";
 
+type CycleFilterStatus = "all" | "active" | "upcoming" | "completed";
+
 export const CyclePage = () => {
+  const [filterStatus, setFilterStatus] = useState<CycleFilterStatus>("all");
+
   return (
     <>
       {/* Breadcrumb */}
@@ -12,8 +19,8 @@ export const CyclePage = () => {
         <span className="font-medium text-gray-900">Cycles</span>
       </div>
 
-      <CycleHeader />
-      <CycleList />
+      <CycleHeader filterStatus={filterStatus} setFilterStatus={setFilterStatus} />
+      <CycleList filterStatus={filterStatus} />
     </>
   );
 };
