@@ -3,8 +3,8 @@
 import {
   DndContext,
   closestCenter,
-  DragEndEvent,
 } from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
 
 import {
   SortableContext,
@@ -24,32 +24,49 @@ interface Props {
   reload: () => void;
 }
 
+const BOARD_STATES: Issue["state"][] = [
+  "Backlog",
+  "Todo",
+  "In Progress",
+  "Done",
+];
+
+const getTargetState = (
+  overId: string,
+  issues: Issue[],
+): Issue["state"] | null => {
+  if (BOARD_STATES.includes(overId as Issue["state"])) {
+    return overId as Issue["state"];
+  }
+
+  const overIssue = issues.find((issue) => issue.id === overId);
+
+  return overIssue?.state ?? null;
+};
+
 export default function IssueBoard({
   issues,
   reload,
 }: Props) {
-  const states = [
-    "Backlog",
-    "Todo",
-    "In Progress",
-    "Done",
-  ];
-
   const handleDragEnd = async (
-    event: DragEndEvent
+    event: DragEndEvent,
   ) => {
     const { active, over } = event;
 
     if (!over) return;
 
     const issueId = String(active.id);
-    const newState = String(over.id);
+    const overId = String(over.id);
 
     const issue = issues.find(
-      (i) => i.id === issueId
+      (item) => item.id === issueId,
     );
 
     if (!issue) return;
+
+    const newState = getTargetState(overId, issues);
+
+    if (!newState) return;
 
     if (issue.state === newState) return;
 
@@ -71,16 +88,16 @@ export default function IssueBoard({
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid grid-cols-4 gap-4 mt-6">
-        {states.map((state) => {
+      <div className="mt-6 grid grid-cols-4 gap-4">
+        {BOARD_STATES.map((state) => {
           const stateIssues = issues.filter(
-            (i) => i.state === state
+            (issue) => issue.state === state,
           );
 
           return (
             <SortableContext
               key={state}
-              items={stateIssues.map((i) => i.id)}
+              items={stateIssues.map((issue) => issue.id)}
               strategy={verticalListSortingStrategy}
             >
               <BoardColumn

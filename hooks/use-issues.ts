@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
+
 import {
   createIssue,
   deleteIssue,
@@ -33,6 +39,7 @@ type IssueListSnapshot = Array<[readonly unknown[], Issue[] | undefined]>;
 type CreateIssueContext = {
   previousIssues?: Issue[];
   optimisticIssue: Issue;
+  projectId: string;
 };
 
 type UpdateIssueContext = {
@@ -45,11 +52,69 @@ type DeleteIssueContext = {
   previousIssue?: Issue;
 };
 
+type IssueProjectShape = {
+  projectId?: string | null;
+  project_id?: string | null;
+};
+
+const workspaceIssuesQueryKey = ["workspace-data", "issues"] as const;
+
+const getIssueProjectId = (issue: IssueProjectShape) => {
+  return issue.projectId ?? issue.project_id ?? "";
+};
+
+const removeIssueFromList = (issues: Issue[] = [], issueId: string) => {
+  return issues.filter((issue) => issue.id !== issueId);
+};
+
+const addOrReplaceIssueInList = (
+  issues: Issue[] = [],
+  targetIssue: Issue,
+) => {
+  return [
+    targetIssue,
+    ...issues.filter((issue) => issue.id !== targetIssue.id),
+  ];
+};
+
+const replaceIssueInList = (
+  issues: Issue[] = [],
+  targetIssue: Issue,
+  optimisticIssueId?: string,
+) => {
+  return issues.map((issue) => {
+    if (issue.id === targetIssue.id || issue.id === optimisticIssueId) {
+      return targetIssue;
+    }
+
+    return issue;
+  });
+};
+
+const mergeIssueUpdate = (issue: Issue, data: UpdateIssueDto): Issue => {
+  return {
+    ...issue,
+    ...data,
+    state: (data.state as Issue["state"]) ?? issue.state,
+    priority: (data.priority as Issue["priority"]) ?? issue.priority,
+  };
+};
+
+const invalidateIssueQueries = (queryClient: QueryClient) => {
+  queryClient.invalidateQueries({
+    queryKey: issueKeys.all,
+  });
+
+  queryClient.invalidateQueries({
+    queryKey: workspaceIssuesQueryKey,
+  });
+};
+
 export const useIssues = (projectId?: string) => {
   const { activeProjectId } = useAppStore();
   const selectedProjectId = projectId ?? activeProjectId ?? undefined;
 
-  return useQuery({
+  return useQuery<Issue[], Error>({
     queryKey: issueKeys.list(selectedProjectId),
     queryFn: () => getIssues(selectedProjectId),
     enabled: !!selectedProjectId,
@@ -57,7 +122,7 @@ export const useIssues = (projectId?: string) => {
 };
 
 export const useIssue = (issueId?: string) => {
-  return useQuery({
+  return useQuery<Issue, Error>({
     queryKey: issueId ? issueKeys.detail(issueId) : issueKeys.detail(""),
     queryFn: () => getIssueById(issueId as string),
     enabled: !!issueId,
@@ -71,54 +136,81 @@ export const useCreateIssueMutation = () => {
     mutationFn: createIssue,
 
     onMutate: async (newIssue) => {
+      const projectId = getIssueProjectId(newIssue as IssueProjectShape);
+      const createdAt = new Date().toISOString();
+
       await queryClient.cancelQueries({
-        queryKey: issueKeys.list(newIssue.projectId),
+        queryKey: issueKeys.all,
       });
 
       const previousIssues = queryClient.getQueryData<Issue[]>(
-        issueKeys.list(newIssue.projectId),
+        issueKeys.list(projectId),
       );
 
-      const optimisticIssue: Issue = {
+      const optimisticIssue = {
         ...newIssue,
         id: `temp-${Date.now()}`,
-        created_at: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-      };
+        project_id: projectId,
+        projectId,
+        created_at: createdAt,
+        createdAt,
+      } as Issue;
 
       queryClient.setQueryData<Issue[]>(
-        issueKeys.list(newIssue.projectId),
-        (oldIssues = []) => [optimisticIssue, ...oldIssues],
+        issueKeys.list(projectId),
+        (oldIssues = []) => addOrReplaceIssueInList(oldIssues, optimisticIssue),
       );
 
-      return { previousIssues, optimisticIssue };
+      return { previousIssues, optimisticIssue, projectId };
     },
 
-    onError: (_error, newIssue, context) => {
-      if (context?.previousIssues) {
-        queryClient.setQueryData(
-          issueKeys.list(newIssue.projectId),
-          context.previousIssues,
-        );
-      }
+    onError: (_error, _newIssue, context) => {
+      if (!context) return;
+
+      queryClient.setQueryData(
+        issueKeys.list(context.projectId),
+        context.previousIssues,
+      );
     },
 
     onSuccess: (createdIssue, _newIssue, context) => {
-      queryClient.setQueryData<Issue[]>(
-        issueKeys.list(createdIssue.projectId),
+      const projectId = getIssueProjectId(createdIssue) || context.projectId;
+
+      queryClient.setQueriesData<Issue[]>(
+        { queryKey: issueKeys.lists() },
         (oldIssues = []) =>
-          oldIssues.map((issue) =>
-            issue.id === context.optimisticIssue.id ? createdIssue : issue,
+          replaceIssueInList(
+            oldIssues,
+            createdIssue,
+            context.optimisticIssue.id,
           ),
       );
+
+      queryClient.setQueryData<Issue[]>(
+        issueKeys.list(projectId),
+        (oldIssues = []) =>
+          addOrReplaceIssueInList(
+            removeIssueFromList(oldIssues, context.optimisticIssue.id),
+            createdIssue,
+          ),
+      );
+
+      if (projectId !== context.projectId) {
+        queryClient.setQueryData<Issue[]>(
+          issueKeys.list(context.projectId),
+          (oldIssues = []) =>
+            removeIssueFromList(
+              removeIssueFromList(oldIssues, context.optimisticIssue.id),
+              createdIssue.id,
+            ),
+        );
+      }
 
       queryClient.setQueryData(issueKeys.detail(createdIssue.id), createdIssue);
     },
 
-    onSettled: (_data, _error, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: issueKeys.list(variables.projectId),
-      });
+    onSettled: () => {
+      invalidateIssueQueries(queryClient);
     },
   });
 };
@@ -145,29 +237,15 @@ export const useUpdateIssueMutation = () => {
       queryClient.setQueriesData<Issue[]>(
         { queryKey: issueKeys.lists() },
         (oldIssues = []) =>
-          oldIssues.map((issue) => {
-            if (issue.id !== id) return issue;
-
-            const nextIssue: Issue = {
-              ...issue,
-              ...data,
-              state: (data.state as Issue["state"]) ?? issue.state,
-              priority: (data.priority as Issue["priority"]) ?? issue.priority,
-            };
-
-            return nextIssue;
-          }),
+          oldIssues.map((issue) =>
+            issue.id === id ? mergeIssueUpdate(issue, data) : issue,
+          ),
       );
 
       queryClient.setQueryData<Issue>(issueKeys.detail(id), (oldIssue) => {
         if (!oldIssue) return oldIssue;
 
-        return {
-          ...oldIssue,
-          ...data,
-          state: (data.state as Issue["state"]) ?? oldIssue.state,
-          priority: (data.priority as Issue["priority"]) ?? oldIssue.priority,
-        };
+        return mergeIssueUpdate(oldIssue, data);
       });
 
       return { previousIssueLists, previousIssue };
@@ -187,21 +265,25 @@ export const useUpdateIssueMutation = () => {
     },
 
     onSuccess: (updatedIssue) => {
+      const projectId = getIssueProjectId(updatedIssue);
+
       queryClient.setQueriesData<Issue[]>(
         { queryKey: issueKeys.lists() },
-        (oldIssues = []) =>
-          oldIssues.map((issue) =>
-            issue.id === updatedIssue.id ? updatedIssue : issue,
-          ),
+        (oldIssues = []) => replaceIssueInList(oldIssues, updatedIssue),
       );
+
+      if (projectId) {
+        queryClient.setQueryData<Issue[]>(
+          issueKeys.list(projectId),
+          (oldIssues = []) => addOrReplaceIssueInList(oldIssues, updatedIssue),
+        );
+      }
 
       queryClient.setQueryData(issueKeys.detail(updatedIssue.id), updatedIssue);
     },
 
     onSettled: (_data, _error, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: issueKeys.all,
-      });
+      invalidateIssueQueries(queryClient);
 
       queryClient.invalidateQueries({
         queryKey: issueKeys.detail(variables.id),
@@ -231,7 +313,7 @@ export const useDeleteIssueMutation = () => {
 
       queryClient.setQueriesData<Issue[]>(
         { queryKey: issueKeys.lists() },
-        (oldIssues = []) => oldIssues.filter((issue) => issue.id !== id),
+        (oldIssues = []) => removeIssueFromList(oldIssues, id),
       );
 
       queryClient.removeQueries({
@@ -255,9 +337,7 @@ export const useDeleteIssueMutation = () => {
     },
 
     onSettled: () => {
-      queryClient.invalidateQueries({
-        queryKey: issueKeys.all,
-      });
+      invalidateIssueQueries(queryClient);
     },
   });
 };
