@@ -116,9 +116,9 @@ export const useCreateIssueMutation = () => {
       queryClient.setQueryData(issueKeys.detail(createdIssue.id), createdIssue);
     },
 
-    onSettled: (_data, _error, variables) => {
+    onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: issueKeys.list(variables.project_id),
+        queryKey: issueKeys.all,
       });
     },
   });

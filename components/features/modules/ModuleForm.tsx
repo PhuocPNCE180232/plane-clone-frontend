@@ -4,12 +4,17 @@ import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createModuleSchema } from "@/lib/validations/module";
 import { createModule } from "@/lib/services/module.service";
-import { useAppStore } from "@/hooks/use-app-store";
-import { Archive, Clock, Play, Pause, CheckCircle, XCircle, Check } from "lucide-react";
+import { Clock, Check, CheckCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import {
+  getModuleLifecycleLabel,
+  toPersistedModuleStatus,
+  type ModuleLifecycleStatus,
+} from "@/lib/module-lifecycle";
 
 type Props = {
-	onClose: () => void;
+  projectId: string;
+  onClose: () => void;
 };
 
 const DateRangeToggle = () => {
@@ -60,25 +65,22 @@ const StatusDropdown = ({
   onChange,
 }: {
   name?: string;
-  value?: string;
-  onChange?: (value: string) => void;
+  value?: ModuleLifecycleStatus;
+  onChange?: (value: ModuleLifecycleStatus) => void;
 }) => {
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState(value ?? "Backlog");
+  const [uncontrolledSelected, setUncontrolledSelected] = useState(
+    value ?? "upcoming",
+  );
+  const selected = value ?? uncontrolledSelected;
 
-  React.useEffect(() => {
-    if (value) {
-      setSelected(value);
-    }
-  }, [value]);
-
-  const options: { key: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>> }[] = [
-    { key: "Backlog", label: "Backlog", icon: Archive },
-    { key: "Planned", label: "Planned", icon: Clock },
-    { key: "In Progress", label: "In Progress", icon: Play },
-    { key: "Paused", label: "Paused", icon: Pause },
-    { key: "Completed", label: "Completed", icon: CheckCircle },
-    { key: "Cancelled", label: "Cancelled", icon: XCircle },
+  const options: {
+    key: ModuleLifecycleStatus;
+    label: string;
+    icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  }[] = [
+    { key: "upcoming", label: "Upcoming", icon: Clock },
+    { key: "done", label: "Done", icon: CheckCircle },
   ];
 
   return (
@@ -88,7 +90,7 @@ const StatusDropdown = ({
         onClick={() => setOpen((s) => !s)}
         className="flex items-center gap-2 rounded-md border px-3 py-1 text-sm bg-white text-black"
       >
-        {selected}
+        {getModuleLifecycleLabel(selected)}
       </button>
 
       <input type="hidden" name={name} value={selected} />
@@ -103,7 +105,9 @@ const StatusDropdown = ({
                 key={opt.key}
                 type="button"
                 onClick={() => {
-                  setSelected(opt.key);
+                  if (value === undefined) {
+                    setUncontrolledSelected(opt.key);
+                  }
                   onChange?.(opt.key);
                   setOpen(false);
                 }}
@@ -123,15 +127,14 @@ const StatusDropdown = ({
   );
 };
 
-export const ModuleForm = ({ onClose }: Props) => {
+export const ModuleForm = ({ projectId, onClose }: Props) => {
   const queryClient = useQueryClient();
-  const { activeProjectId } = useAppStore();
-  const [status, setStatus] = useState("Backlog");
+  const [status, setStatus] = useState<ModuleLifecycleStatus>("upcoming");
 
   const { mutate: handleCreateModule, isPending } = useMutation({
     mutationFn: createModule,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["modules"] });
+      queryClient.invalidateQueries({ queryKey: ["modules", projectId] });
       toast.success("Module created successfully.");
       onClose();
     },
@@ -149,7 +152,7 @@ export const ModuleForm = ({ onClose }: Props) => {
       description: (form.elements.namedItem("description") as HTMLTextAreaElement)?.value,
       startDate: (form.elements.namedItem("startDate") as HTMLInputElement)?.value,
       endDate: (form.elements.namedItem("endDate") as HTMLInputElement)?.value,
-      status,
+      status: toPersistedModuleStatus(status),
     };
 
     const res = createModuleSchema.safeParse(payload);
@@ -160,13 +163,12 @@ export const ModuleForm = ({ onClose }: Props) => {
     }
 
     handleCreateModule({
-      project_id: activeProjectId || "p1",
+      project_id: projectId,
       name: res.data.title,
       description: res.data.description || "",
       start_date: res.data.startDate || "",
       end_date: res.data.endDate || "",
       status: res.data.status,
-      progress: 0,
     });
   };
 

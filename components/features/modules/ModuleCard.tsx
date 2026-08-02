@@ -5,15 +5,23 @@ import { useState, type FormEvent, type MouseEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { mockIssues } from "@/mocks/db";
 import type { Module } from "@/lib/services/module.service";
+import type { Issue } from "@/types";
 import { deleteModule, updateModule } from "@/lib/services/module.service";
 import { createModuleSchema } from "@/lib/validations/module";
 import { toast } from "@/hooks/use-toast";
 import { confirm } from "@/hooks/use-confirm";
+import { getIssueProgress } from "@/lib/issue-progress";
+import {
+  getModuleLifecycleLabel,
+  getModuleLifecycleStatus,
+  toPersistedModuleStatus,
+  type ModuleLifecycleStatus,
+} from "@/lib/module-lifecycle";
 
 type ModuleCardProps = {
   module: Module;
+  issues: Issue[];
 };
 
 // Deterministic accent colour per module name
@@ -40,28 +48,21 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-export const ModuleCard = ({ module }: ModuleCardProps) => {
+export const ModuleCard = ({ module, issues }: ModuleCardProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const queryClient = useQueryClient();
   const params = useParams<{ workspaceSlug: string }>();
   const accent = accentFor(module.name);
 
-  const moduleIssues = mockIssues.filter((i) => i.module_id === module.id);
-  const total = moduleIssues.length;
-  const completed = moduleIssues.filter((i) => i.state === "Done").length;
-  const inProgress = moduleIssues.filter((i) => i.state === "In Progress").length;
-  const progressPct = module.progress ?? (total > 0 ? Math.round((completed / total) * 100) : 0);
-  const statusKey = module.status ?? (progressPct >= 100 ? "Completed" : progressPct > 0 ? "In Progress" : "Backlog");
-  const statusClasses: Record<string, string> = {
-    Backlog: "bg-slate-100 text-slate-600",
-    Planned: "bg-blue-100 text-blue-600",
-    "In Progress": "bg-amber-100 text-amber-600",
-    Paused: "bg-gray-100 text-gray-600",
-    Completed: "bg-emerald-100 text-emerald-600",
-    Cancelled: "bg-rose-100 text-rose-600",
+  const moduleIssues = issues.filter((issue) => issue.module_id === module.id);
+  const progress = getIssueProgress(moduleIssues);
+  const { total, inProgress, percent: progressPct } = progress;
+  const lifecycleStatus = getModuleLifecycleStatus(module, progress);
+  const statusClasses: Record<ModuleLifecycleStatus, string> = {
+    upcoming: "bg-blue-100 text-blue-600",
+    done: "bg-emerald-100 text-emerald-600",
   };
-  const statusLabel = statusClasses[statusKey] ? statusKey : "Backlog";
 
   const { mutate: handleDeleteModule, isPending: isDeleting } = useMutation({
     mutationFn: () => deleteModule(module.id),
@@ -104,7 +105,11 @@ export const ModuleCard = ({ module }: ModuleCardProps) => {
   return (
     <>
       <Link
-        href={params?.workspaceSlug ? `/${params.workspaceSlug}/modules/${module.id}` : '#'}
+        href={
+          params?.workspaceSlug
+            ? `/${params.workspaceSlug}/projects/${module.project_id}/modules/${module.id}`
+            : "#"
+        }
         className={
           `group relative flex flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300`}
       >
@@ -172,8 +177,8 @@ export const ModuleCard = ({ module }: ModuleCardProps) => {
       </p>
 
       <div className="mb-3">
-        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-medium ${statusClasses[statusKey] ?? "bg-slate-100 text-slate-600"}`}>
-          {statusLabel}
+        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-medium ${statusClasses[lifecycleStatus]}`}>
+          {getModuleLifecycleLabel(lifecycleStatus)}
         </span>
       </div>
 
@@ -215,6 +220,7 @@ export const ModuleCard = ({ module }: ModuleCardProps) => {
     {isEditOpen && (
       <ModuleEditModal
         module={module}
+        initialStatus={lifecycleStatus}
         onClose={() => setIsEditOpen(false)}
         onSuccess={() => setIsEditOpen(false)}
       />
@@ -225,10 +231,12 @@ export const ModuleCard = ({ module }: ModuleCardProps) => {
 
 const ModuleEditModal = ({
   module,
+  initialStatus,
   onClose,
   onSuccess,
 }: {
   module: Module;
+  initialStatus: ModuleLifecycleStatus;
   onClose: () => void;
   onSuccess: () => void;
 }) => {
@@ -237,8 +245,8 @@ const ModuleEditModal = ({
   const [description, setDescription] = useState(module.description ?? "");
   const [startDate, setStartDate] = useState(module.start_date ?? "");
   const [endDate, setEndDate] = useState(module.end_date ?? "");
-  const [status, setStatus] = useState<NonNullable<Module["status"]>>(module.status ?? "Backlog");
-  const statusOptions: NonNullable<Module["status"]>[] = ["Backlog", "Planned", "In Progress", "Paused", "Completed", "Cancelled"];
+  const [status, setStatus] = useState<ModuleLifecycleStatus>(initialStatus);
+  const statusOptions: ModuleLifecycleStatus[] = ["upcoming", "done"];
 
   const { mutate: handleUpdateModule, isPending } = useMutation({
     mutationFn: () =>
@@ -247,7 +255,7 @@ const ModuleEditModal = ({
         description,
         start_date: startDate,
         end_date: endDate,
-        status,
+        status: toPersistedModuleStatus(status),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["modules"] });
@@ -262,7 +270,13 @@ const ModuleEditModal = ({
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const validation = createModuleSchema.safeParse({ title, description, startDate, endDate, status });
+    const validation = createModuleSchema.safeParse({
+      title,
+      description,
+      startDate,
+      endDate,
+      status: toPersistedModuleStatus(status),
+    });
     if (!validation.success) {
       const first = validation.error.issues[0];
       toast.warning(first.message || "Validation error");
@@ -337,12 +351,14 @@ const ModuleEditModal = ({
             <span className="text-sm font-medium text-gray-700">Status</span>
             <select
               value={status}
-              onChange={(event) => setStatus(event.target.value as NonNullable<Module["status"]>)}
+              onChange={(event) =>
+                setStatus(event.target.value as ModuleLifecycleStatus)
+              }
               className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-black"
             >
               {statusOptions.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {getModuleLifecycleLabel(option)}
                 </option>
               ))}
             </select>

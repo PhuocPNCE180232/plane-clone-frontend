@@ -5,6 +5,7 @@ import { BarChart2, Check, ChevronRight, FolderOpen } from "lucide-react";
 import { useClickOutside } from "@/hooks/use-click-outside";
 
 import { useWorkspaceData } from "@/hooks/use-workspace-data";
+import { WorkspaceHomeLink } from "@/components/shared/WorkspaceHomeLink";
 import { getIssueAssigneeId, getIssueProjectId } from "./analytics.helpers";
 
 import { OverviewAnalyticsTab } from "./tabs/OverviewAnalyticsTab";
@@ -150,6 +151,7 @@ export const WorkspaceAnalyticsPage = () => {
         <CyclesAnalyticsTab
           cycles={filteredCycles}
           projects={filteredProjects}
+          issues={filteredIssues}
         />
       );
     }
@@ -159,6 +161,7 @@ export const WorkspaceAnalyticsPage = () => {
         <ModulesAnalyticsTab
           modules={filteredModules}
           projects={filteredProjects}
+          issues={filteredIssues}
         />
       );
     }
@@ -185,7 +188,7 @@ export const WorkspaceAnalyticsPage = () => {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-1.5 text-sm text-gray-500">
-        <span>Workspace</span>
+        <WorkspaceHomeLink>Workspace</WorkspaceHomeLink>
         <ChevronRight className="h-3.5 w-3.5" />
         <span className="font-medium text-gray-900">Analytics</span>
       </div>

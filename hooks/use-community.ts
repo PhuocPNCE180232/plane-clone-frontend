@@ -16,16 +16,21 @@ import type { CommunityPost } from "@/types";
 export const communityKeys = {
   all:   ["community"] as const,
   lists: () => [...communityKeys.all, "list"] as const,
-  list:  () => [...communityKeys.lists()] as const,
+  list:  (workspaceId?: string | null) =>
+    [...communityKeys.lists(), workspaceId ?? "none"] as const,
 };
 
 // ─── Hooks ─────────────────────────────────────────────────────────────────
 
-/** Returns all community posts. */
-export const useCommunity = () =>
+/** Returns community posts for the selected workspace. */
+export const useCommunity = (workspaceId?: string) =>
   useQuery({
-    queryKey: communityKeys.list(),
-    queryFn:  getPosts,
+    queryKey: communityKeys.list(workspaceId),
+    queryFn: async () => {
+      const posts = await getPosts(workspaceId as string);
+      return posts.filter((post) => post.workspace_id === workspaceId);
+    },
+    enabled: !!workspaceId,
   });
 
 /**
@@ -38,8 +43,10 @@ export const useCreatePostMutation = () => {
   return useMutation<CommunityPost, Error, CreatePostDto>({
     mutationFn: createPost,
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: communityKeys.list() });
+    onSuccess: (_post, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: communityKeys.list(variables.workspace_id),
+      });
     },
 
     onError: (error) => {
@@ -55,11 +62,17 @@ export const useCreatePostMutation = () => {
 export const useToggleLikeMutation = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<CommunityPost, Error, { postId: string }>({
-    mutationFn: ({ postId }) => toggleLike(postId),
+  return useMutation<
+    CommunityPost,
+    Error,
+    { postId: string; workspaceId: string }
+  >({
+    mutationFn: ({ postId, workspaceId }) => toggleLike(postId, workspaceId),
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: communityKeys.list() });
+    onSuccess: (_post, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: communityKeys.list(variables.workspaceId),
+      });
     },
 
     onError: (error) => {
@@ -78,12 +91,15 @@ export const useAddCommentMutation = () => {
   return useMutation<
     CommunityPost,
     Error,
-    { postId: string; data: AddCommentDto }
+    { postId: string; workspaceId: string; data: AddCommentDto }
   >({
-    mutationFn: ({ postId, data }) => addComment(postId, data),
+    mutationFn: ({ postId, workspaceId, data }) =>
+      addComment(postId, workspaceId, data),
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: communityKeys.list() });
+    onSuccess: (_post, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: communityKeys.list(variables.workspaceId),
+      });
     },
 
     onError: (error) => {
@@ -99,11 +115,18 @@ export const useAddCommentMutation = () => {
 export const useDeleteCommentMutation = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<void, Error, { postId: string; commentId: string }>({
-    mutationFn: ({ postId, commentId }) => deleteComment(postId, commentId),
+  return useMutation<
+    void,
+    Error,
+    { postId: string; commentId: string; workspaceId: string }
+  >({
+    mutationFn: ({ postId, commentId, workspaceId }) =>
+      deleteComment(postId, commentId, workspaceId),
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: communityKeys.list() });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: communityKeys.list(variables.workspaceId),
+      });
     },
 
     onError: (error) => {
@@ -119,11 +142,13 @@ export const useDeleteCommentMutation = () => {
 export const useDeletePostMutation = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<void, Error, string>({
-    mutationFn: deletePost,
+  return useMutation<void, Error, { postId: string; workspaceId: string }>({
+    mutationFn: ({ postId, workspaceId }) => deletePost(postId, workspaceId),
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: communityKeys.list() });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: communityKeys.list(variables.workspaceId),
+      });
     },
 
     onError: (error) => {

@@ -3,6 +3,7 @@
 import { Trash2, MessageCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import type { Question } from "@/types";
 import { useDeleteQuestionMutation } from "@/hooks/use-questions";
@@ -45,7 +46,9 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
 
     if (!ok) return;
 
-    handleDeleteQuestion(question.id, {
+    handleDeleteQuestion(
+      { questionId: question.id, workspaceId: question.workspace_id },
+      {
       onSuccess: () => {
         toast.success("Question deleted successfully.");
       },
@@ -56,7 +59,8 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
           "Failed to delete question. Please try again.";
         toast.error(message);
       },
-    });
+      },
+    );
   };
 
   return (
@@ -67,9 +71,11 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
       {/* ── Top row: Avatar + Author + Relative time + Delete button ───────── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img
+          <Image
             src={question.avatar}
             alt={question.author}
+            width={32}
+            height={32}
             className="h-8 w-8 rounded-full object-cover border border-gray-200 shrink-0"
           />
           <div>

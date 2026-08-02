@@ -22,15 +22,22 @@
  *   "TODO: inject Authorization header" comment block below.
  *
  * • 401 / SESSION HANDLING
- *   The response interceptor does NOT redirect or clear cookies.
- *   Token refresh and logout flows must be implemented after the backend
- *   contract is confirmed. Add them here at that point.
+ *   The response interceptor clears the mock session and redirects to sign-in
+ *   when a protected client request receives a 401. Token refresh must be
+ *   implemented here once the backend contract is confirmed.
  */
 
 import axios, { InternalAxiosRequestConfig } from "axios";
 import { normaliseError } from "./error";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
+const AUTH_ROUTES = new Set([
+  "/sign-in",
+  "/sign-up",
+  "/login",
+  "/signup",
+  "/forgot-password",
+]);
 
 // ─── Axios instance ────────────────────────────────────────────────────────
 
@@ -84,8 +91,7 @@ apiClient.interceptors.request.use(
 // Responsibilities (intentionally minimal):
 //   ✓ Pass successful responses through unchanged.
 //   ✓ Normalise all errors into a typed ApiError.
-//   ✗ Does NOT redirect.
-//   ✗ Does NOT clear cookies or local storage.
+//   ✓ Clears the mock session and redirects protected client requests on 401.
 //   ✗ Does NOT attempt token refresh.
 //
 // Token refresh and session expiry handling must be added here after the
@@ -99,9 +105,11 @@ apiClient.interceptors.response.use(
       // Tự động đá người dùng về trang đăng nhập
       if (
         typeof window !== "undefined" &&
-        !window.location.pathname.includes("/login")
+        !AUTH_ROUTES.has(window.location.pathname)
       ) {
-        window.location.href = "/login";
+        document.cookie = "plane_session=; path=/; max-age=0";
+        window.localStorage.removeItem("auth-storage");
+        window.location.assign("/sign-in");
       }
     }
 

@@ -4,19 +4,28 @@ import { RefreshCcw } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { CycleCard } from "./CycleCard";
 import { ActiveCyclePanel } from "./ActiveCyclePanel";
-import { mockIssues } from "@/mocks/db";
 import { useQuery } from "@tanstack/react-query";
 import { getCycles, type Cycle } from "@/lib/services/cycle.service";
+import { useIssues } from "@/hooks/use-issues";
+import type { Issue } from "@/types";
 
 type CycleFilterStatus = "all" | "active" | "upcoming" | "completed";
 
-export const CycleList = ({ filterStatus }: { filterStatus: CycleFilterStatus }) => {
-  const { data: cycles = [], isLoading } = useQuery<Cycle[], Error>({
-    queryKey: ["cycles"],
-    queryFn: getCycles,
-  });
+type CycleListViewProps = {
+  projectId: string;
+  filterStatus: CycleFilterStatus;
+};
 
-  if (isLoading) {
+export const CycleList = ({ projectId, filterStatus }: CycleListViewProps) => {
+  const { data: cycles = [], isLoading } = useQuery<Cycle[], Error>({
+    queryKey: ["cycles", projectId],
+    queryFn: () => getCycles(projectId),
+  });
+  const { data: issues = [], isLoading: isIssuesLoading } = useIssues(projectId);
+
+  const projectCycles = cycles.filter((cycle) => cycle.project_id === projectId);
+
+  if (isLoading || isIssuesLoading) {
     return (
       <Card>
         <div className="flex h-64 flex-col items-center justify-center text-center">
@@ -27,7 +36,7 @@ export const CycleList = ({ filterStatus }: { filterStatus: CycleFilterStatus })
     );
   }
 
-  if (cycles.length === 0) {
+  if (projectCycles.length === 0) {
     return (
       <Card>
         <div className="flex h-64 flex-col items-center justify-center text-center">
@@ -43,12 +52,24 @@ export const CycleList = ({ filterStatus }: { filterStatus: CycleFilterStatus })
 
   return (
     <div className="space-y-8">
-      {(filterStatus === "all" || filterStatus === "active") && <ActiveSection cycles={cycles} />}
+      {(filterStatus === "all" || filterStatus === "active") && (
+        <ActiveSection cycles={projectCycles} issues={issues} />
+      )}
       {(filterStatus === "all" || filterStatus === "upcoming") && (
-        <CycleSection cycles={cycles} label="Upcoming Cycles" status="upcoming" />
+        <CycleSection
+          cycles={projectCycles}
+          issues={issues}
+          label="Upcoming Cycles"
+          status="upcoming"
+        />
       )}
       {(filterStatus === "all" || filterStatus === "completed") && (
-        <CycleSection cycles={cycles} label="Completed Cycles" status="completed" />
+        <CycleSection
+          cycles={projectCycles}
+          issues={issues}
+          label="Completed Cycles"
+          status="completed"
+        />
       )}
     </div>
   );
@@ -60,6 +81,7 @@ type Status = "active" | "upcoming" | "completed";
 
 type CycleListProps = {
   cycles: Cycle[];
+  issues: Issue[];
 };
 
 function getCycleStatus(startDate: string, endDate: string): Status {
@@ -71,7 +93,7 @@ function getCycleStatus(startDate: string, endDate: string): Status {
   return "active";
 }
 
-const ActiveSection = ({ cycles }: CycleListProps) => {
+const ActiveSection = ({ cycles, issues }: CycleListProps) => {
   const activeCycles = cycles.filter((c) => getCycleStatus(c.start_date, c.end_date) === "active");
 
   if (activeCycles.length === 0) return null;
@@ -83,7 +105,7 @@ const ActiveSection = ({ cycles }: CycleListProps) => {
       </h2>
       <div className="space-y-4">
         {activeCycles.map((cycle) => {
-          const cycleIssues = mockIssues.filter((i) => i.cycle_id === cycle.id);
+          const cycleIssues = issues.filter((issue) => issue.cycle_id === cycle.id);
           return <ActiveCyclePanel key={cycle.id} cycle={cycle} issues={cycleIssues} />;
         })}
       </div>
@@ -96,7 +118,7 @@ type CycleSectionProps = CycleListProps & {
   status: Status;
 };
 
-const CycleSection = ({ cycles, label, status }: CycleSectionProps) => {
+const CycleSection = ({ cycles, issues, label, status }: CycleSectionProps) => {
   const filteredCycles = cycles.filter((c) => getCycleStatus(c.start_date, c.end_date) === status);
 
   if (filteredCycles.length === 0) return null;
@@ -108,7 +130,7 @@ const CycleSection = ({ cycles, label, status }: CycleSectionProps) => {
       </h2>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {filteredCycles.map((cycle) => {
-          const cycleIssues = mockIssues.filter((i) => i.cycle_id === cycle.id);
+          const cycleIssues = issues.filter((issue) => issue.cycle_id === cycle.id);
           return <CycleCard key={cycle.id} cycle={cycle} issues={cycleIssues} />;
         })}
       </div>

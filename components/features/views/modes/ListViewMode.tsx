@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { Issue } from "@/types";
 
 import { EmptyState } from "../EmptyState";
@@ -17,12 +19,14 @@ interface ListViewModeProps {
   issues: Issue[];
   projectMap: WorkspaceProjectMap;
   displayOptions: DisplayOptions;
+  workspaceSlug: string;
 }
 
 export const ListViewMode = ({
   issues,
   projectMap,
   displayOptions,
+  workspaceSlug,
 }: ListViewModeProps) => {
   if (issues.length === 0) {
     return <EmptyState />;
@@ -42,12 +46,13 @@ export const ListViewMode = ({
         const project = projectMap.get(getIssueProjectId(issue));
 
         return (
-          <div
+          <Link
             key={issue.id}
-            className="grid grid-cols-[1.2fr_160px_130px_120px_120px] items-center border-b border-gray-100 px-3 py-2 last:border-b-0"
+            href={`/${workspaceSlug}/projects/${getIssueProjectId(issue)}/issues/${issue.id}`}
+            className="group grid grid-cols-[1.2fr_160px_130px_120px_120px] items-center border-b border-gray-100 px-3 py-2 transition-colors last:border-b-0 hover:bg-gray-50 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3f76ff]"
           >
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-gray-800">
+              <p className="truncate text-sm font-medium text-gray-800 group-hover:text-[#3f76ff]">
                 {issue.title}
               </p>
               <p className="text-xs text-gray-400">{issue.id}</p>
@@ -70,7 +75,7 @@ export const ListViewMode = ({
                 ? formatDate(getIssueDate(issue))
                 : "-"}
             </span>
-          </div>
+          </Link>
         );
       })}
     </div>

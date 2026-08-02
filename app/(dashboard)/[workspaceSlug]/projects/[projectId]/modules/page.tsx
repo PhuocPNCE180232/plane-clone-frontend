@@ -1,5 +1,13 @@
 import { ModulePage } from "@/components/features/modules/ModulePage";
 
-export default function ModulesPage() {
-  return <ModulePage />;
+interface ModulesPageProps {
+  params: Promise<{
+    projectId: string;
+  }>;
+}
+
+export default async function ModulesPage({ params }: ModulesPageProps) {
+  const { projectId } = await params;
+
+  return <ModulePage projectId={projectId} />;
 }

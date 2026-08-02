@@ -4,8 +4,12 @@ import { Loader2, MessageSquare } from "lucide-react";
 import { useCommunity } from "@/hooks/use-community";
 import { CommunityPostCard } from "./CommunityPostCard";
 
-export const CommunityList = () => {
-  const { data: posts, isLoading } = useCommunity();
+type CommunityListProps = {
+  workspaceId?: string;
+};
+
+export const CommunityList = ({ workspaceId }: CommunityListProps) => {
+  const { data: posts, isLoading } = useCommunity(workspaceId);
 
   // ── Loading ─────────────────────────────────────────────────────────────
   if (isLoading) {

@@ -1,4 +1,5 @@
 import { MoreHorizontal } from "lucide-react";
+import type { Issue } from "@/types";
 import { IssuePriorityBadge } from "./IssuePriorityBadge";
 import { IssueStatusBadge } from "./IssueStatusBadge";
 
@@ -7,12 +8,12 @@ type NamedEntity = string | { id?: string; name?: string } | undefined;
 export interface IssueDetailsProps {
   issue?: {
     labels?: string[] | string;
-    start_date?: string;
-    due_date?: string;
+    start_date?: Issue["start_date"];
+    due_date?: Issue["due_date"];
     title?: string;
     description?: string;
-    state?: string;
-    priority?: string;
+    state?: Issue["state"];
+    priority?: Issue["priority"];
     project?: NamedEntity;
     assignee?: NamedEntity;
     module?: NamedEntity;

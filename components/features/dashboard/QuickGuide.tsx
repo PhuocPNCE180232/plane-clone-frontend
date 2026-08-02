@@ -51,6 +51,8 @@ export const QuickGuide = () => {
     } else if (action === "setup_workspace") {
       const slug = params?.workspaceSlug;
       if (slug) router.push(`/${slug}/settings`);
+    } else if (action === "customize_profile") {
+      router.push("/account");
     }
   };
 

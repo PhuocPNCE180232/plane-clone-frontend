@@ -6,7 +6,6 @@ import {
   BarChart2,
   Boxes,
   CircleDot,
-  FileEdit,
   FolderOpen,
   Home,
   Layers,
@@ -48,7 +47,6 @@ export const Sidebar = () => {
   const menus: NavItem[] = [
     { icon: <Home       className="h-4 w-4" />, title: "Home",      href: `/${slug}`        },
     { icon: <Bell       className="h-4 w-4" />, title: "Inbox",     href: `/${slug}/inbox`  },
-    { icon: <FileEdit   className="h-4 w-4" />, title: "Drafts",    href: `/${slug}/drafts` },
     { icon: <UserCircle className="h-4 w-4" />, title: "Your Work", href: `/${slug}/your-work` },
     { icon: <Pin        className="h-4 w-4" />, title: "Stickies",  href: `/${slug}/stickies`  },
   ];

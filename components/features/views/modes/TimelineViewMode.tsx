@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { Issue } from "@/types";
 
 import { EmptyState } from "../EmptyState";
@@ -17,6 +19,7 @@ interface TimelineViewModeProps {
   issues: Issue[];
   projectMap: WorkspaceProjectMap;
   displayOptions: DisplayOptions;
+  workspaceSlug: string;
 }
 
 const getProgressByState = (state: Issue["state"]) => {
@@ -32,6 +35,7 @@ export const TimelineViewMode = ({
   issues,
   projectMap,
   displayOptions,
+  workspaceSlug,
 }: TimelineViewModeProps) => {
   if (issues.length === 0) {
     return <EmptyState />;
@@ -44,12 +48,13 @@ export const TimelineViewMode = ({
         const progress = getProgressByState(issue.state);
 
         return (
-          <div
+          <Link
             key={issue.id}
-            className="grid gap-3 rounded-lg border border-gray-200 p-3 md:grid-cols-[220px_1fr_120px]"
+            href={`/${workspaceSlug}/projects/${getIssueProjectId(issue)}/issues/${issue.id}`}
+            className="group grid gap-3 rounded-lg border border-gray-200 p-3 transition-colors hover:border-[#3f76ff]/40 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f76ff] md:grid-cols-[220px_1fr_120px]"
           >
             <div>
-              <p className="text-sm font-medium text-gray-800">
+              <p className="text-sm font-medium text-gray-800 group-hover:text-[#3f76ff]">
                 {issue.title}
               </p>
 
@@ -74,7 +79,7 @@ export const TimelineViewMode = ({
                 ? formatDate(getIssueDate(issue))
                 : "-"}
             </p>
-          </div>
+          </Link>
         );
       })}
     </div>

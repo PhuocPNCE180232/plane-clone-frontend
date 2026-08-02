@@ -7,11 +7,16 @@ import { CycleForm } from "./CycleForm";
 type CycleFilterStatus = "all" | "active" | "upcoming" | "completed";
 
 type CycleHeaderProps = {
+  projectId: string;
   filterStatus: CycleFilterStatus;
   setFilterStatus: Dispatch<SetStateAction<CycleFilterStatus>>;
 };
 
-export const CycleHeader = ({ filterStatus, setFilterStatus }: CycleHeaderProps) => {
+export const CycleHeader = ({
+  projectId,
+  filterStatus,
+  setFilterStatus,
+}: CycleHeaderProps) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
@@ -118,7 +123,7 @@ export const CycleHeader = ({ filterStatus, setFilterStatus }: CycleHeaderProps)
               </button>
             </div>
 
-            <CycleForm onClose={() => setIsFormOpen(false)} />
+            <CycleForm projectId={projectId} onClose={() => setIsFormOpen(false)} />
           </div>
         </div>
       )}

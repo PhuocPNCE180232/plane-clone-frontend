@@ -1,30 +1,74 @@
 "use client";
 
 import { toast } from "sonner";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createIssue } from "@/lib/services/issue.service";
+import { getModules, type Module } from "@/lib/services/module.service";
+import { getCycles, type Cycle } from "@/lib/services/cycle.service";
+import { userService } from "@/lib/services/user.service";
+import type { User } from "@/types";
 
 type IssueState = "Backlog" | "Todo" | "In Progress" | "Done" | "Cancelled";
 type IssuePriority = "Urgent" | "High" | "Medium" | "Low" | "None";
 
 interface IssueFormProps {
+  projectId: string;
   onClose: () => void;
   onCreated: () => void;
 }
 
-export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
+export const IssueForm = ({ projectId, onClose, onCreated }: IssueFormProps) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<IssuePriority>("Low");
   const [state, setState] = useState<IssueState>("Todo");
 
-  const [projectId, setProjectId] = useState("p1");
   const [assigneeId, setAssigneeId] = useState("");
   const [moduleId, setModuleId] = useState("");
   const [cycleId, setCycleId] = useState("");
   const [labels, setLabels] = useState("");
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [modules, setModules] = useState<Module[]>([]);
+  const [cycles, setCycles] = useState<Cycle[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [relationshipProjectId, setRelationshipProjectId] = useState(projectId);
+
+  if (relationshipProjectId !== projectId) {
+    setRelationshipProjectId(projectId);
+    setModuleId("");
+    setCycleId("");
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadOptions = async () => {
+      try {
+        const [moduleData, cycleData, userData] = await Promise.all([
+          getModules(projectId),
+          getCycles(projectId),
+          userService.getUsers(),
+        ]);
+
+        if (cancelled) return;
+
+        setModules(moduleData.filter((module) => module.project_id === projectId));
+        setCycles(cycleData.filter((cycle) => cycle.project_id === projectId));
+        setUsers(userData);
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to load issue options:", error);
+        }
+      }
+    };
+
+    void loadOptions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
 
   const handleCreate = async () => {
     try {
@@ -63,22 +107,6 @@ export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
         </h2>
 
         <div className="space-y-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Project
-            </label>
-
-            <select
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              className="w-full rounded border p-2"
-            >
-              <option value="p1">Plane Clone</option>
-              <option value="p2">Backend API</option>
-              <option value="p3">Mobile App</option>
-            </select>
-          </div>
-
           <div>
             <label className="mb-1 block text-sm font-medium">
               Title
@@ -149,13 +177,11 @@ export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
               className="w-full rounded border p-2"
             >
               <option value="">None</option>
-              <option value="u1">Phước</option>
-              <option value="u2">Điền</option>
-              <option value="u3">Danh</option>
-              <option value="u4">Nhân</option>
-              <option value="u5">Nghĩa</option>
-              <option value="u6">Trâm</option>
-              <option value="u7">Đức</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -170,9 +196,11 @@ export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
               className="w-full rounded border p-2"
             >
               <option value="">None</option>
-              <option value="m1">Auth</option>
-              <option value="m2">Core Features</option>
-              <option value="m3">UI Components</option>
+              {modules.map((module) => (
+                <option key={module.id} value={module.id}>
+                  {module.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -187,8 +215,11 @@ export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
               className="w-full rounded border p-2"
             >
               <option value="">None</option>
-              <option value="c1">Cycle 1</option>
-              <option value="c2">Cycle 2</option>
+              {cycles.map((cycle) => (
+                <option key={cycle.id} value={cycle.id}>
+                  {cycle.name}
+                </option>
+              ))}
             </select>
           </div>
 

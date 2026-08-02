@@ -26,7 +26,7 @@ export const IssueRow = ({ issue, onDelete }: IssueRowProps) => {
   const assignee =
     mockUsers.find((user) => user.id === issue.assignee_id) ?? null;
 
-  const module =
+  const issueModule =
     mockModules.find((item) => item.id === issue.module_id) ?? null;
 
   const cycle =
@@ -39,13 +39,11 @@ export const IssueRow = ({ issue, onDelete }: IssueRowProps) => {
         .slice(0, 2)
         .join("")
         .toUpperCase()
-    : "–";
+    : "â€“";
 
   const handleRowClick = () => {
-    console.log("CLICK", issue.id);
-
     router.push(
-      `/${params.workspaceSlug}/issues/${issue.id}`
+      `/${params.workspaceSlug}/projects/${issue.project_id}/issues/${issue.id}`
     );
   };
 
@@ -62,36 +60,30 @@ export const IssueRow = ({ issue, onDelete }: IssueRowProps) => {
       "
       onClick={handleRowClick}
     >
-      {/* Priority */}
       <div className="w-20 shrink-0">
         <IssuePriorityBadge priority={issue.priority} />
       </div>
 
-      {/* Issue ID */}
       <span className="w-14 shrink-0 select-none font-mono text-xs text-gray-400">
         {issue.id}
       </span>
 
-      {/* State */}
       <div className="w-28 shrink-0">
         <IssueStatusBadge state={issue.state} />
       </div>
 
-      {/* Title */}
       <span className="flex-1 truncate text-sm font-medium text-gray-800 group-hover:text-gray-900">
         {issue.title}
       </span>
 
-      {/* Module */}
-      {module ? (
+      {issueModule ? (
         <span className="shrink-0 whitespace-nowrap rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-[10px] font-medium text-purple-600">
-          {module.name}
+          {issueModule.name}
         </span>
       ) : (
         <span className="w-24 shrink-0" />
       )}
 
-      {/* Cycle */}
       {cycle ? (
         <span className="shrink-0 whitespace-nowrap rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600">
           {cycle.name.split(":")[0].trim()}
@@ -100,14 +92,12 @@ export const IssueRow = ({ issue, onDelete }: IssueRowProps) => {
         <span className="w-16 shrink-0" />
       )}
 
-      {/* Label */}
       <span className="shrink-0 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-600">
         {issue.labels?.length
           ? issue.labels.join(", ")
           : "-"}
       </span>
 
-      {/* Due Date */}
       <div className="flex w-24 shrink-0 items-center gap-1 text-[11px] text-gray-400">
         <CalendarDays className="h-3 w-3 shrink-0" />
         <span>
@@ -117,7 +107,6 @@ export const IssueRow = ({ issue, onDelete }: IssueRowProps) => {
         </span>
       </div>
 
-      {/* Assignee */}
       <div
         className="shrink-0"
         title={assignee?.name ?? "Unassigned"}
@@ -136,7 +125,6 @@ export const IssueRow = ({ issue, onDelete }: IssueRowProps) => {
         )}
       </div>
 
-      {/* Delete button */}
       <button
         type="button"
         className="
@@ -156,7 +144,6 @@ export const IssueRow = ({ issue, onDelete }: IssueRowProps) => {
         -
       </button>
 
-      {/* More menu */}
       <button
         type="button"
         className="

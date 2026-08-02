@@ -70,9 +70,13 @@ export const CreateWorkspaceModal = ({ isOpen, onClose }: CreateWorkspaceModalPr
       toast.success("Workspace created successfully.");
       router.push(`/${newWorkspace.slug}/projects`);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error("Failed to create workspace:", error);
-      setErrorMsg(error?.message || "Failed to create workspace. Please try another URL.");
+      setErrorMsg(
+        error instanceof Error
+          ? error.message
+          : "Failed to create workspace. Please try another URL.",
+      );
     },
   });
 

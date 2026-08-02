@@ -17,11 +17,11 @@ export const ISSUE_PRIORITIES: Issue["priority"][] = [
 ];
 
 export const getIssueDate = (issue: Issue) => {
-  return issue.created_at || issue.createdAt || "";
+  return issue.created_at;
 };
 
 export const getIssueProjectId = (issue: Issue) => {
-  return issue.project_id || issue.projectId || "";
+  return issue.project_id;
 };
 
 export const formatDate = (value?: string) => {

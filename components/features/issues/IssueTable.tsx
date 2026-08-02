@@ -16,7 +16,6 @@ export const IssueTable = ({
 }: IssueTableProps) => {
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-      {/* Header */}
       <div className="flex items-center gap-3 border-b border-gray-200 bg-gray-50 px-4 py-2">
         <span className="w-20 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
           Priority
@@ -54,7 +53,6 @@ export const IssueTable = ({
         <span className="w-6 shrink-0" />
       </div>
 
-      {/* Section */}
       <div className="flex items-center gap-2 border-b border-gray-100 bg-white px-4 py-2">
         <Layers className="h-3.5 w-3.5 text-gray-400" />
 
@@ -67,7 +65,6 @@ export const IssueTable = ({
         </span>
       </div>
 
-      {/* Empty */}
       {issues.length === 0 ? (
         <div className="flex h-32 flex-col items-center justify-center gap-1">
           <p className="text-sm font-medium text-gray-500">

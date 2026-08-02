@@ -2,23 +2,18 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { Lock, Globe, Trash2, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useProjects, useUpdateProjectMutation, useDeleteProjectMutation } from "@/hooks/use-projects";
-import { useQueryClient } from "@tanstack/react-query";
-import { useAppStore } from "@/hooks/use-app-store";
 import { toast } from "@/hooks/use-toast";
 import { confirm } from "@/hooks/use-confirm";
 
 export const ProjectSettings = () => {
   const params = useParams();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const slug = (params?.workspaceSlug as string) ?? "";
   const projectId = (params?.projectId as string) ?? "";
   
   const { data: projects, isLoading: isProjectsLoading } = useProjects();
-  const { activeWorkspaceId } = useAppStore();
-  
   const project = projects?.find((p) => p.id === projectId);
 
   const [name, setName] = useState("");
@@ -27,15 +22,14 @@ export const ProjectSettings = () => {
   const [network, setNetwork] = useState<"public" | "private">("public");
   const [isArchiving, setIsArchiving] = useState(false);
 
-  // Populate state when project data is loaded
-  useEffect(() => {
-    if (project) {
-      setName(project.name);
-      setIdentifier(project.identifier);
-      setDescription(project.description || "");
-      setNetwork(project.network || "public");
-    }
-  }, [project]);
+  const [formProjectId, setFormProjectId] = useState<string | undefined>();
+  if (project?.id !== formProjectId) {
+    setFormProjectId(project?.id);
+    setName(project?.name ?? "");
+    setIdentifier(project?.identifier ?? "");
+    setDescription(project?.description ?? "");
+    setNetwork(project?.network ?? "public");
+  }
 
   const { mutate: handleUpdateProject, isPending: isUpdating } = useUpdateProjectMutation();
   const { mutate: handleDeleteProject, isPending: isDeleting } = useDeleteProjectMutation();

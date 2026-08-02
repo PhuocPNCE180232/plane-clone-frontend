@@ -2,32 +2,34 @@
 
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-
-type SignupForm = {
-  name: string;
-  email: string;
-  password?: string;
-};
+import { signUpSchema, type SignUpInput } from "@/lib/validations/auth";
 
 export default function SignupPage() {
   const router = useRouter();
   const { signup, isLoading } = useAuth();
-  const { register, handleSubmit, formState: { errors } } = useForm<SignupForm>();
+  const { register, handleSubmit, formState: { errors } } = useForm<SignUpInput>({
+    resolver: zodResolver(signUpSchema),
+  });
   const [errorMsg, setErrorMsg] = useState("");
 
-  const onSubmit = async (data: SignupForm) => {
+  const onSubmit = async (data: SignUpInput) => {
     setErrorMsg("");
     try {
       await signup(data);
       router.push("/onboarding");
-    } catch (err: any) {
-      setErrorMsg(err?.message || "Failed to create account. Please try again.");
+    } catch (error: unknown) {
+      setErrorMsg(
+        error instanceof Error
+          ? error.message
+          : "Failed to create account. Please try again.",
+      );
     }
   };
 
@@ -54,7 +56,7 @@ export default function SignupPage() {
           <Input 
             id="name" 
             placeholder="John Doe" 
-            {...register("name", { required: "Name is required" })} 
+            {...register("name")}
           />
           {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
         </div>
@@ -65,7 +67,7 @@ export default function SignupPage() {
             id="email" 
             type="email" 
             placeholder="name@example.com" 
-            {...register("email", { required: "Email is required" })} 
+            {...register("email")}
           />
           {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
         </div>
@@ -76,8 +78,9 @@ export default function SignupPage() {
             id="password" 
             type="password" 
             placeholder="••••••••" 
-            {...register("password")} 
+            {...register("password")}
           />
+          {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
         </div>
 
         <Button type="submit" className="w-full" disabled={isLoading}>

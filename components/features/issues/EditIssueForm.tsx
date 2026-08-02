@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { updateIssue } from "@/lib/services/issue.service";
+import { issueKeys } from "@/hooks/use-issues";
 import { getProjects } from "@/lib/services/project.service";
-import { getModules } from "@/lib/services/module.service";
-import { getCycles } from "@/lib/services/cycle.service";
+import { getModules, type Module } from "@/lib/services/module.service";
+import { getCycles, type Cycle } from "@/lib/services/cycle.service";
 import { userService } from "@/lib/services/user.service";
-import type { Issue } from "@/types";
+import type { Issue, Project, User } from "@/types";
 
 interface EditIssueFormProps {
   issue: Issue;
@@ -20,6 +22,7 @@ export const EditIssueForm = ({
   onClose,
   onUpdated,
 }: EditIssueFormProps) => {
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState(issue.title);
   const [description, setDescription] = useState(issue.description);
   const [priority, setPriority] = useState(issue.priority);
@@ -42,10 +45,30 @@ export const EditIssueForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // States chứa dữ liệu danh sách động
-  const [projects, setProjects] = useState<any[]>([]);
-  const [modules, setModules] = useState<any[]>([]);
-  const [cycles, setCycles] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [cycles, setCycles] = useState<Cycle[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isOptionsLoaded, setIsOptionsLoaded] = useState(false);
+  const projectModules = modules.filter(
+    (module) => module.project_id === projectId,
+  );
+  const projectCycles = cycles.filter((cycle) => cycle.project_id === projectId);
+  const selectedModuleId =
+    !isOptionsLoaded ||
+    projectModules.some((module) => module.id === moduleId)
+    ? moduleId
+    : "";
+  const selectedCycleId =
+    !isOptionsLoaded || projectCycles.some((cycle) => cycle.id === cycleId)
+    ? cycleId
+    : "";
+
+  const handleProjectChange = (nextProjectId: string) => {
+    setProjectId(nextProjectId);
+    setModuleId("");
+    setCycleId("");
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,6 +85,7 @@ export const EditIssueForm = ({
         setModules(moduleData);
         setCycles(cycleData);
         setUsers(userData);
+        setIsOptionsLoaded(true);
       } catch (error) {
         console.error("Failed to fetch options:", error);
       }
@@ -83,8 +107,8 @@ export const EditIssueForm = ({
         state,
         priority,
         assignee_id: assigneeId || null,
-        module_id: moduleId || null,
-        cycle_id: cycleId || null,
+        module_id: selectedModuleId || null,
+        cycle_id: selectedCycleId || null,
         labels: labels
           .split(",")
           .map((x) => x.trim())
@@ -92,6 +116,8 @@ export const EditIssueForm = ({
         start_date: startDate || null,
         due_date: dueDate || null,
       });
+
+      await queryClient.invalidateQueries({ queryKey: issueKeys.all });
 
       toast.success("Issue updated successfully!");
 
@@ -120,7 +146,7 @@ export const EditIssueForm = ({
 
             <select
               value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
+              onChange={(e) => handleProjectChange(e.target.value)}
               className="w-full rounded border p-2"
             >
               {projects.map((p) => (
@@ -163,7 +189,7 @@ export const EditIssueForm = ({
 
             <select
               value={priority}
-              onChange={(e) => setPriority(e.target.value)}
+              onChange={(e) => setPriority(e.target.value as Issue["priority"])}
               className="w-full rounded border p-2"
             >
               <option>Low</option>
@@ -180,7 +206,7 @@ export const EditIssueForm = ({
 
             <select
               value={state}
-              onChange={(e) => setState(e.target.value)}
+              onChange={(e) => setState(e.target.value as Issue["state"])}
               className="w-full rounded border p-2"
             >
               <option>Todo</option>
@@ -215,12 +241,12 @@ export const EditIssueForm = ({
             </label>
 
             <select
-              value={moduleId}
+              value={selectedModuleId}
               onChange={(e) => setModuleId(e.target.value)}
               className="w-full rounded border p-2"
             >
               <option value="">None</option>
-              {modules.map((m) => (
+              {projectModules.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name}
                 </option>
@@ -234,12 +260,12 @@ export const EditIssueForm = ({
             </label>
 
             <select
-              value={cycleId}
+              value={selectedCycleId}
               onChange={(e) => setCycleId(e.target.value)}
               className="w-full rounded border p-2"
             >
               <option value="">None</option>
-              {cycles.map((c) => (
+              {projectCycles.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>

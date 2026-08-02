@@ -145,7 +145,7 @@ export const ProjectCard = ({
           </span>
           <span className="flex items-center gap-1">
             <CircleDot className="h-3.5 w-3.5 text-gray-400" />
-            {issues} Issues
+            {issues} {issues === 1 ? "Issue" : "Issues"}
           </span>
           <span className="ml-auto flex items-center gap-1 text-gray-400">
             <Clock className="h-3.5 w-3.5" />

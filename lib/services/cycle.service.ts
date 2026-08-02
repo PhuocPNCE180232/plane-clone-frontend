@@ -30,7 +30,6 @@ export interface Cycle {
   description?: string;
   start_date: string;
   end_date: string;
-  progress?: number;
 }
 
 // ─── DTO types ─────────────────────────────────────────────────────────────
@@ -43,9 +42,9 @@ export type UpdateCycleDto = Partial<CreateCycleDto>;
 
 // ─── Service functions ─────────────────────────────────────────────────────
 
-/** Returns all cycles. */
-export const getCycles = (): Promise<Cycle[]> =>
-  get<Cycle[]>("/cycles");
+/** Returns all cycles, optionally scoped to a project. */
+export const getCycles = (projectId?: string): Promise<Cycle[]> =>
+  get<Cycle[]>(projectId ? `/cycles?project_id=${encodeURIComponent(projectId)}` : "/cycles");
 
 /** Returns a single cycle by its ID. */
 export const getCycleById = (id: string): Promise<Cycle> =>

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SignInInput, signInSchema } from "@/lib/validations/auth";
 import { Input } from "@/components/ui/input";
@@ -21,21 +21,25 @@ export default function SignInPage() {
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<SignInInput>({
     resolver: zodResolver(signInSchema),
   });
 
-  const emailValue = watch("email");
+  const emailValue = useWatch({ control, name: "email" });
 
   const onSubmit = async (data: SignInInput) => {
     setErrorMsg("");
     try {
       await login({ email: data.email, password: data.password });
       router.push("/onboarding");
-    } catch (err: any) {
-      setErrorMsg(err?.message || "Invalid credentials. Please try again.");
+    } catch (error: unknown) {
+      setErrorMsg(
+        error instanceof Error
+          ? error.message
+          : "Invalid credentials. Please try again.",
+      );
     }
   };
 

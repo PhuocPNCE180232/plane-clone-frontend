@@ -12,11 +12,12 @@ import Link from "next/link";
 import { type FormEvent, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { Cycle, Issue } from "@/mocks/db";
-import { deleteCycle, updateCycle } from "@/lib/services/cycle.service";
+import { deleteCycle, updateCycle, type Cycle } from "@/lib/services/cycle.service";
+import type { Issue } from "@/types";
 import { toast } from "@/hooks/use-toast";
 import { confirm } from "@/hooks/use-confirm";
 import { CycleStatusBadge } from "./CycleStatusBadge";
+import { getIssueProgress } from "@/lib/issue-progress";
 
 type ActiveCyclePanelProps = {
   cycle: Cycle;
@@ -54,14 +55,19 @@ const stateIcon = (state: string) => {
 
 export const ActiveCyclePanel = ({ cycle, issues }: ActiveCyclePanelProps) => {
   const params = useParams<{ workspaceSlug: string }>();
-  const href = params?.workspaceSlug ? `/${params.workspaceSlug}/cycles/${cycle.id}` : `/cycles/${cycle.id}`;
+  const href = params?.workspaceSlug
+    ? `/${params.workspaceSlug}/projects/${cycle.project_id}/cycles/${cycle.id}`
+    : `/projects/${cycle.project_id}/cycles/${cycle.id}`;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  const total     = issues.length;
-  const completed = issues.filter((i) => i.state === "Done").length;
-  const inProg    = issues.filter((i) => i.state === "In Progress").length;
+  const {
+    total,
+    completed,
+    inProgress: inProg,
+    percent: completedPct,
+  } = getIssueProgress(issues);
   const daysLeft  = getDaysLeft(cycle.end_date);
 
   const { mutate: handleDeleteCycle, isPending: isDeleting } = useMutation({
@@ -92,7 +98,6 @@ export const ActiveCyclePanel = ({ cycle, issues }: ActiveCyclePanelProps) => {
   };
 
   // Segment widths (guard divide-by-zero)
-  const completedPct  = total > 0 ? Math.round((completed / total) * 100) : 0;
   const inProgressPct = total > 0 ? Math.round((inProg    / total) * 100) : 0;
 
   return (

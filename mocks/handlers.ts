@@ -8,7 +8,7 @@
  * (default: http://localhost:8000/api/v1).
  */
 
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, type JsonBodyType } from "msw";
 import {
   mockUsers,
   mockWorkspaces,
@@ -27,12 +27,10 @@ import {
   User,
   Workspace,
   Project,
-  Issue,
   Module,
   Member,
   Page,
   CustomView,
-  Notification,
   CommunityPost,
   Question,
   // -----------------------------------
@@ -72,8 +70,9 @@ interface ModulePayload {
   project_id?: string;
   name: string;
   description?: string;
-  progress?: number;
   status?: Module["status"];
+  start_date?: string;
+  end_date?: string;
 }
 
 interface CyclePayload {
@@ -82,7 +81,6 @@ interface CyclePayload {
   description?: string;
   start_date?: string;
   end_date?: string;
-  progress?: number;
 }
 
 interface IssuePayload {
@@ -112,6 +110,7 @@ interface UserSettingsPayload {
 interface MemberPayload {
   email: string;
   role: string;
+  workspace_id?: string;
 }
 
 interface PagePayload {
@@ -122,10 +121,6 @@ interface PagePayload {
 interface ViewPayload {
   name: string;
   filters?: Record<string, unknown>;
-}
-
-interface InboxPayload {
-  is_read: boolean;
 }
 
 interface CommunityPostPayload {
@@ -149,7 +144,7 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
   const headers = new Headers(init?.headers);
   headers.set("Access-Control-Allow-Origin", "http://localhost:3000");
   headers.set("Access-Control-Allow-Credentials", "true");
-  return HttpResponse.json(body as any, { ...init, headers });
+  return HttpResponse.json(body as JsonBodyType, { ...init, headers });
 }
 
 // Helper to handle errors safely without 'any'
@@ -171,6 +166,88 @@ const getSessionId = (request: Request) => {
     sessionId = document.cookie?.split("plane_session=")?.[1]?.split(";")?.[0];
   }
   return sessionId;
+};
+
+const getWorkspaceId = (request: Request) =>
+  new URL(request.url).searchParams.get("workspace_id");
+
+const toPublicUser = (user: User) => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  avatar: user.avatar,
+});
+
+type IssueRelationshipError = {
+  error: string;
+  status: 400 | 404;
+};
+
+const normalizeRequiredIssueProjectId = (value: unknown) =>
+  typeof value === "string" && value.trim() ? value.trim() : null;
+
+const normalizeOptionalIssueRelationshipId = (
+  value: unknown,
+  fieldName: string,
+): { id: string | null; error?: IssueRelationshipError } => {
+  if (value === undefined || value === null) {
+    return { id: null };
+  }
+
+  if (typeof value !== "string" || !value.trim()) {
+    return {
+      id: null,
+      error: {
+        error: `${fieldName} must be a non-empty string or null`,
+        status: 400,
+      },
+    };
+  }
+
+  return { id: value.trim() };
+};
+
+const validateIssueRelationships = (
+  projectId: string,
+  assigneeId: string | null,
+  moduleId: string | null,
+  cycleId: string | null,
+): IssueRelationshipError | null => {
+  if (!mockProjects.some((project) => project.id === projectId)) {
+    return { error: "Project not found", status: 404 };
+  }
+
+  if (assigneeId && !mockUsers.some((user) => user.id === assigneeId)) {
+    return { error: "Assignee not found", status: 404 };
+  }
+
+  if (moduleId) {
+    const moduleItem = mockModules.find((module) => module.id === moduleId);
+    if (!moduleItem) {
+      return { error: "Module not found", status: 404 };
+    }
+    if (moduleItem.project_id !== projectId) {
+      return {
+        error: "Module does not belong to the selected project",
+        status: 400,
+      };
+    }
+  }
+
+  if (cycleId) {
+    const cycle = mockCycles.find((item) => item.id === cycleId);
+    if (!cycle) {
+      return { error: "Cycle not found", status: 404 };
+    }
+    if (cycle.project_id !== projectId) {
+      return {
+        error: "Cycle does not belong to the selected project",
+        status: 400,
+      };
+    }
+  }
+
+  return null;
 };
 
 export const handlers: ReturnType<typeof http.all>[] = [
@@ -197,12 +274,12 @@ export const handlers: ReturnType<typeof http.all>[] = [
       return jsonResponse({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    if (user.password && user.password !== password) {
+    if (!password || !user.password || user.password !== password) {
       return jsonResponse({ error: "Invalid credentials" }, { status: 401 });
     }
 
     return jsonResponse(
-      { user, token: "mock_token_" + user.id },
+      { user: toPublicUser(user), token: "mock_token_" + user.id },
       {
         headers: {
           "Set-Cookie": `plane_session=${user.id}; Path=/; HttpOnly`,
@@ -214,6 +291,13 @@ export const handlers: ReturnType<typeof http.all>[] = [
   http.post(`${BASE}/auth/signup`, async ({ request }) => {
     const body = (await request.json()) as SignupPayload;
     const { email, name, password } = body;
+
+    if (!email?.trim() || !password || password.length < 8) {
+      return jsonResponse(
+        { error: "A valid email and password of at least 8 characters are required" },
+        { status: 400 },
+      );
+    }
 
     const existing = mockUsers.find((u) => u.email === email);
     if (existing) {
@@ -231,7 +315,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
     saveToStorage("mockUsers", mockUsers);
 
     return jsonResponse(
-      { user: newUser, token: "mock_token_" + newUser.id },
+      { user: toPublicUser(newUser), token: "mock_token_" + newUser.id },
       {
         headers: {
           "Set-Cookie": `plane_session=${newUser.id}; Path=/; HttpOnly`,
@@ -247,7 +331,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
       return jsonResponse({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const users = mockUsers.map(({ password, ...user }) => user);
+    const users = mockUsers.map(toPublicUser);
 
     return jsonResponse(users);
   }),
@@ -264,9 +348,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
       return jsonResponse({ error: "User not found" }, { status: 404 });
     }
 
-    const { password, ...safeUser } = user;
-
-    return jsonResponse({ user: safeUser });
+    return jsonResponse({ user: toPublicUser(user) });
   }),
 
   http.post(`${BASE}/auth/logout`, async () => {
@@ -288,6 +370,18 @@ export const handlers: ReturnType<typeof http.all>[] = [
       return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
     return jsonResponse(mockWorkspaces);
+  }),
+
+  http.get(`${BASE}/workspaces/:id`, async ({ request, params }) => {
+    const sessionId = getSessionId(request);
+    if (!sessionId)
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+    const workspace = mockWorkspaces.find((item) => item.id === params.id);
+    if (!workspace)
+      return jsonResponse({ error: "Workspace not found" }, { status: 404 });
+
+    return jsonResponse(workspace);
   }),
 
   http.post(`${BASE}/workspaces`, async ({ request }) => {
@@ -372,6 +466,18 @@ export const handlers: ReturnType<typeof http.all>[] = [
     return jsonResponse(mockProjects);
   }),
 
+  http.get(`${BASE}/projects/:id`, async ({ request, params }) => {
+    const sessionId = getSessionId(request);
+    if (!sessionId)
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+
+    const project = mockProjects.find((item) => item.id === params.id);
+    if (!project)
+      return jsonResponse({ error: "Project not found" }, { status: 404 });
+
+    return jsonResponse(project);
+  }),
+
   http.post(`${BASE}/projects`, async ({ request }) => {
     try {
       const body = (await request.json()) as ProjectPayload;
@@ -449,7 +555,12 @@ export const handlers: ReturnType<typeof http.all>[] = [
     const sessionId = getSessionId(request);
     if (!sessionId)
       return jsonResponse({ error: "Unauthorized" }, { status: 401 });
-    return jsonResponse(mockModules);
+    const projectId = new URL(request.url).searchParams.get("project_id");
+    return jsonResponse(
+      projectId
+        ? mockModules.filter((module) => module.project_id === projectId)
+        : mockModules,
+    );
   }),
 
   http.post(`${BASE}/modules`, async ({ request }) => {
@@ -464,8 +575,9 @@ export const handlers: ReturnType<typeof http.all>[] = [
         project_id: body.project_id || "p1",
         name: body.name,
         description: body.description || "",
-        progress: body.progress ?? 0,
         status: body.status ?? "Backlog",
+        start_date: body.start_date,
+        end_date: body.end_date,
       };
 
       mockModules.push(newModule);
@@ -536,7 +648,12 @@ export const handlers: ReturnType<typeof http.all>[] = [
     const sessionId = getSessionId(request);
     if (!sessionId)
       return jsonResponse({ error: "Unauthorized" }, { status: 401 });
-    return jsonResponse(mockCycles);
+    const projectId = new URL(request.url).searchParams.get("project_id");
+    return jsonResponse(
+      projectId
+        ? mockCycles.filter((cycle) => cycle.project_id === projectId)
+        : mockCycles,
+    );
   }),
 
   http.post(`${BASE}/cycles`, async ({ request }) => {
@@ -553,7 +670,6 @@ export const handlers: ReturnType<typeof http.all>[] = [
         description: body.description || "",
         start_date: body.start_date || "",
         end_date: body.end_date || "",
-        progress: body.progress ?? 0,
       };
 
       mockCycles.push(newCycle);
@@ -630,6 +746,44 @@ export const handlers: ReturnType<typeof http.all>[] = [
       if (!sessionId)
         return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
+      const projectId = normalizeRequiredIssueProjectId(body.project_id);
+      if (!projectId) {
+        return jsonResponse(
+          { error: "project_id is required" },
+          { status: 400 },
+        );
+      }
+
+      const assignee = normalizeOptionalIssueRelationshipId(
+        body.assignee_id,
+        "assignee_id",
+      );
+      const moduleRelation = normalizeOptionalIssueRelationshipId(
+        body.module_id,
+        "module_id",
+      );
+      const cycle = normalizeOptionalIssueRelationshipId(
+        body.cycle_id,
+        "cycle_id",
+      );
+      const formatError = assignee.error ?? moduleRelation.error ?? cycle.error;
+      if (formatError) {
+        return jsonResponse({ error: formatError.error }, { status: formatError.status });
+      }
+
+      const relationshipError = validateIssueRelationships(
+        projectId,
+        assignee.id,
+        moduleRelation.id,
+        cycle.id,
+      );
+      if (relationshipError) {
+        return jsonResponse(
+          { error: relationshipError.error },
+          { status: relationshipError.status },
+        );
+      }
+
       const maxIssueNumber = Math.max(
         0,
         ...mockIssues.map((issue) => {
@@ -642,7 +796,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
 
       const newIssue = {
         id: `FE-${nextIssueNumber}`,
-        project_id: body.project_id || "p1",
+        project_id: projectId,
         title: body.title,
         description: body.description ?? "",
         state:
@@ -659,12 +813,12 @@ export const handlers: ReturnType<typeof http.all>[] = [
             | "Medium"
             | "Low"
             | "None") ?? "Low",
-        assignee_id: body.assignee_id ?? null,
-        module_id: body.module_id ?? null,
-        cycle_id: body.cycle_id ?? null,
+        assignee_id: assignee.id,
+        module_id: moduleRelation.id,
+        cycle_id: cycle.id,
         labels: body.labels ?? [],
-        start_date: body.start_date ?? "",
-        due_date: body.due_date ?? "",
+        start_date: body.start_date ?? null,
+        due_date: body.due_date ?? null,
         created_at: new Date().toISOString(),
       };
 
@@ -692,15 +846,67 @@ export const handlers: ReturnType<typeof http.all>[] = [
       if (index === -1)
         return jsonResponse({ error: "Issue not found" }, { status: 404 });
 
+      const currentIssue = mockIssues[index];
+      const projectId = normalizeRequiredIssueProjectId(
+        body.project_id === undefined
+          ? currentIssue.project_id
+          : body.project_id,
+      );
+      if (!projectId) {
+        return jsonResponse(
+          { error: "project_id is required" },
+          { status: 400 },
+        );
+      }
+
+      const assignee = normalizeOptionalIssueRelationshipId(
+        body.assignee_id === undefined
+          ? currentIssue.assignee_id
+          : body.assignee_id,
+        "assignee_id",
+      );
+      const moduleRelation = normalizeOptionalIssueRelationshipId(
+        body.module_id === undefined ? currentIssue.module_id : body.module_id,
+        "module_id",
+      );
+      const cycle = normalizeOptionalIssueRelationshipId(
+        body.cycle_id === undefined ? currentIssue.cycle_id : body.cycle_id,
+        "cycle_id",
+      );
+      const formatError = assignee.error ?? moduleRelation.error ?? cycle.error;
+      if (formatError) {
+        return jsonResponse(
+          { error: formatError.error },
+          { status: formatError.status },
+        );
+      }
+
+      const relationshipError = validateIssueRelationships(
+        projectId,
+        assignee.id,
+        moduleRelation.id,
+        cycle.id,
+      );
+      if (relationshipError) {
+        return jsonResponse(
+          { error: relationshipError.error },
+          { status: relationshipError.status },
+        );
+      }
+
       mockIssues[index] = {
-        ...mockIssues[index],
+        ...currentIssue,
         ...body,
+        project_id: projectId,
+        assignee_id: assignee.id,
+        module_id: moduleRelation.id,
+        cycle_id: cycle.id,
         state: (body.state === "Backlog" || body.state === "Todo" || body.state === "In Progress" || body.state === "Done" || body.state === "Cancelled"
           ? body.state
-          : mockIssues[index].state) as "Backlog" | "Todo" | "In Progress" | "Done" | "Cancelled",
+          : currentIssue.state) as "Backlog" | "Todo" | "In Progress" | "Done" | "Cancelled",
         priority: (body.priority === "Urgent" || body.priority === "High" || body.priority === "Medium" || body.priority === "Low" || body.priority === "None"
           ? body.priority
-          : mockIssues[index].priority) as "Urgent" | "High" | "Medium" | "Low" | "None",
+          : currentIssue.priority) as "Urgent" | "High" | "Medium" | "Low" | "None",
       };
       
       saveToStorage("mockIssues", [...mockIssues]);
@@ -751,8 +957,18 @@ export const handlers: ReturnType<typeof http.all>[] = [
   }),
 
   // --- GET COMMENTS BY ISSUE ID ---
-  http.get(`${BASE}/issues/:id/comments`, async ({ params }) => {
+  http.get(`${BASE}/issues/:id/comments`, async ({ request, params }) => {
+    const sessionId = getSessionId(request);
+    if (!sessionId) {
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const issueId = params.id as string;
+    const issue = mockIssues.find((item) => item.id === issueId);
+    if (!issue) {
+      return jsonResponse({ error: "Issue not found" }, { status: 404 });
+    }
+
     const comments = mockComments.filter(
       (comment) => comment.issue_id === issueId,
     );
@@ -807,14 +1023,14 @@ export const handlers: ReturnType<typeof http.all>[] = [
 
     const assignee = mockUsers.find((u) => u.id === issue.assignee_id);
     const project = mockProjects.find((p) => p.id === issue.project_id);
-    const module = mockModules.find((m) => m.id === issue.module_id);
+    const moduleItem = mockModules.find((m) => m.id === issue.module_id);
     const cycle = mockCycles.find((c) => c.id === issue.cycle_id);
 
     return jsonResponse({
       ...issue,
       assignee,
       project,
-      module,
+      module: moduleItem,
       cycle,
     });
   }),
@@ -843,7 +1059,7 @@ export const handlers: ReturnType<typeof http.all>[] = [
       saveToStorage("mockUsers", mockUsers);
 
       return jsonResponse({
-        user: mockUsers[userIndex],
+        user: toPublicUser(mockUsers[userIndex]),
       });
     } catch (e: unknown) {
       return handleError(e, "PATCH /users/me");
@@ -953,13 +1169,17 @@ export const handlers: ReturnType<typeof http.all>[] = [
       if (!body.email || !body.role)
         return jsonResponse({ error: "Email and role are required" }, { status: 400 });
 
-      const duplicate = mockMembers.find((m) => m.email === body.email);
+      const workspaceId = body.workspace_id || mockWorkspaces[0]?.id || "w1";
+      const duplicate = mockMembers.find(
+        (member) =>
+          member.workspace_id === workspaceId && member.email === body.email,
+      );
       if (duplicate)
         return jsonResponse({ error: "This email is already a member of the workspace" }, { status: 400 });
 
       const newMember: Member = {
         id: `mem-${Date.now()}`,
-        workspace_id: mockWorkspaces[0]?.id ?? "w1",
+        workspace_id: workspaceId,
         email: body.email,
         role: body.role,
         joined_at: new Date().toISOString(),
@@ -1014,8 +1234,10 @@ export const handlers: ReturnType<typeof http.all>[] = [
       if (!sessionId)
         return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
-      const { id } = params;
-      const page = mockPages.find((p) => p.id === id);
+      const { id, project_id } = params;
+      const page = mockPages.find(
+        (item) => item.id === id && item.project_id === project_id,
+      );
       if (!page)
         return jsonResponse({ error: "Page not found" }, { status: 404 });
 
@@ -1058,12 +1280,14 @@ export const handlers: ReturnType<typeof http.all>[] = [
     `${BASE}/projects/:project_id/pages/:id`,
     async ({ request, params }) => {
       try {
-        const { id } = params;
+        const { id, project_id } = params;
         const sessionId = getSessionId(request);
         if (!sessionId)
           return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
-        const index = mockPages.findIndex((p) => p.id === id);
+        const index = mockPages.findIndex(
+          (item) => item.id === id && item.project_id === project_id,
+        );
         if (index === -1)
           return jsonResponse({ error: "Page not found" }, { status: 404 });
 
@@ -1080,12 +1304,14 @@ export const handlers: ReturnType<typeof http.all>[] = [
     `${BASE}/projects/:project_id/pages/:id`,
     async ({ request, params }) => {
       try {
-        const { id } = params;
+        const { id, project_id } = params;
         const sessionId = getSessionId(request);
         if (!sessionId)
           return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
-        const index = mockPages.findIndex((p) => p.id === id);
+        const index = mockPages.findIndex(
+          (item) => item.id === id && item.project_id === project_id,
+        );
         if (index === -1)
           return jsonResponse({ error: "Page not found" }, { status: 404 });
 
@@ -1114,7 +1340,16 @@ export const handlers: ReturnType<typeof http.all>[] = [
     const sessionId = getSessionId(request);
     if (!sessionId)
       return jsonResponse({ error: "Unauthorized" }, { status: 401 });
-    return jsonResponse(mockNotifications);
+
+    const workspaceId = getWorkspaceId(request);
+    if (!workspaceId)
+      return jsonResponse({ error: "workspace_id is required" }, { status: 400 });
+
+    return jsonResponse(
+      mockNotifications.filter(
+        (notification) => notification.workspace_id === workspaceId,
+      ),
+    );
   }),
 
   http.patch(`${BASE}/inbox/read-all`, async ({ request }) => {
@@ -1123,7 +1358,15 @@ export const handlers: ReturnType<typeof http.all>[] = [
       if (!sessionId)
         return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
-      mockNotifications.forEach((n) => { n.is_read = true; });
+      const workspaceId = getWorkspaceId(request);
+      if (!workspaceId)
+        return jsonResponse({ error: "workspace_id is required" }, { status: 400 });
+
+      mockNotifications.forEach((notification) => {
+        if (notification.workspace_id === workspaceId) {
+          notification.is_read = true;
+        }
+      });
       saveToStorage("mockNotifications", mockNotifications);
       return jsonResponse({ success: true });
     } catch (e: unknown) {
@@ -1138,7 +1381,14 @@ export const handlers: ReturnType<typeof http.all>[] = [
         return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
       const { id } = params;
-      const index = mockNotifications.findIndex((n) => n.id === id);
+      const workspaceId = getWorkspaceId(request);
+      if (!workspaceId)
+        return jsonResponse({ error: "workspace_id is required" }, { status: 400 });
+
+      const index = mockNotifications.findIndex(
+        (notification) =>
+          notification.id === id && notification.workspace_id === workspaceId,
+      );
       if (index === -1)
         return jsonResponse({ error: "Not found" }, { status: 404 });
 
@@ -1157,7 +1407,14 @@ export const handlers: ReturnType<typeof http.all>[] = [
         return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
       const { id } = params;
-      const index = mockNotifications.findIndex((n) => n.id === id);
+      const workspaceId = getWorkspaceId(request);
+      if (!workspaceId)
+        return jsonResponse({ error: "workspace_id is required" }, { status: 400 });
+
+      const index = mockNotifications.findIndex(
+        (notification) =>
+          notification.id === id && notification.workspace_id === workspaceId,
+      );
       if (index === -1)
         return jsonResponse({ error: "Not found" }, { status: 404 });
 
@@ -1175,7 +1432,13 @@ export const handlers: ReturnType<typeof http.all>[] = [
     if (!sessionId)
       return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
-    return jsonResponse(mockCommunityPosts);
+    const workspaceId = getWorkspaceId(request);
+    if (!workspaceId)
+      return jsonResponse({ error: "workspace_id is required" }, { status: 400 });
+
+    return jsonResponse(
+      mockCommunityPosts.filter((post) => post.workspace_id === workspaceId),
+    );
   }),
 
   http.post(`${BASE}/community`, async ({ request }) => {
@@ -1187,12 +1450,14 @@ export const handlers: ReturnType<typeof http.all>[] = [
       const body = (await request.json()) as CommunityPostPayload;
       if (!body.content?.trim())
         return jsonResponse({ error: "Post content is required" }, { status: 400 });
+      if (!body.workspace_id || !mockWorkspaces.some((item) => item.id === body.workspace_id))
+        return jsonResponse({ error: "A valid workspace_id is required" }, { status: 400 });
 
       const currentUser = mockUsers.find((u) => u.id === sessionId);
 
       const newPost: CommunityPost = {
         id: `post-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        workspace_id: body.workspace_id || "w1",
+        workspace_id: body.workspace_id,
         author: body.author || currentUser?.name || "Phước (Lead)",
         avatar: body.avatar || currentUser?.avatar || "https://i.pravatar.cc/150?u=u1",
         content: body.content.trim(),
@@ -1217,7 +1482,13 @@ export const handlers: ReturnType<typeof http.all>[] = [
         return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
       const { id } = params;
-      const index = mockCommunityPosts.findIndex((p) => p.id === id);
+      const workspaceId = getWorkspaceId(request);
+      if (!workspaceId)
+        return jsonResponse({ error: "workspace_id is required" }, { status: 400 });
+
+      const index = mockCommunityPosts.findIndex(
+        (post) => post.id === id && post.workspace_id === workspaceId,
+      );
       if (index === -1)
         return jsonResponse({ error: "Post not found" }, { status: 404 });
 
@@ -1245,7 +1516,13 @@ export const handlers: ReturnType<typeof http.all>[] = [
         return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
       const { id } = params;
-      const index = mockCommunityPosts.findIndex((p) => p.id === id);
+      const workspaceId = getWorkspaceId(request);
+      if (!workspaceId)
+        return jsonResponse({ error: "workspace_id is required" }, { status: 400 });
+
+      const index = mockCommunityPosts.findIndex(
+        (post) => post.id === id && post.workspace_id === workspaceId,
+      );
       if (index === -1)
         return jsonResponse({ error: "Post not found" }, { status: 404 });
 
@@ -1280,7 +1557,13 @@ export const handlers: ReturnType<typeof http.all>[] = [
           return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
         const { id, commentId } = params;
-        const postIndex = mockCommunityPosts.findIndex((p) => p.id === id);
+        const workspaceId = getWorkspaceId(request);
+        if (!workspaceId)
+          return jsonResponse({ error: "workspace_id is required" }, { status: 400 });
+
+        const postIndex = mockCommunityPosts.findIndex(
+          (post) => post.id === id && post.workspace_id === workspaceId,
+        );
         if (postIndex === -1)
           return jsonResponse({ error: "Post not found" }, { status: 404 });
 
@@ -1306,7 +1589,13 @@ export const handlers: ReturnType<typeof http.all>[] = [
         return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
       const { id } = params;
-      const index = mockCommunityPosts.findIndex((p) => p.id === id);
+      const workspaceId = getWorkspaceId(request);
+      if (!workspaceId)
+        return jsonResponse({ error: "workspace_id is required" }, { status: 400 });
+
+      const index = mockCommunityPosts.findIndex(
+        (post) => post.id === id && post.workspace_id === workspaceId,
+      );
       if (index === -1)
         return jsonResponse({ error: "Post not found" }, { status: 404 });
 
@@ -1324,7 +1613,13 @@ export const handlers: ReturnType<typeof http.all>[] = [
     if (!sessionId)
       return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
-    return jsonResponse(mockQuestions);
+    const workspaceId = getWorkspaceId(request);
+    if (!workspaceId)
+      return jsonResponse({ error: "workspace_id is required" }, { status: 400 });
+
+    return jsonResponse(
+      mockQuestions.filter((question) => question.workspace_id === workspaceId),
+    );
   }),
 
   http.get(`${BASE}/questions/:id`, async ({ request, params }) => {
@@ -1333,7 +1628,13 @@ export const handlers: ReturnType<typeof http.all>[] = [
       return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = params;
-    const question = mockQuestions.find((q) => q.id === id);
+    const workspaceId = getWorkspaceId(request);
+    if (!workspaceId)
+      return jsonResponse({ error: "workspace_id is required" }, { status: 400 });
+
+    const question = mockQuestions.find(
+      (item) => item.id === id && item.workspace_id === workspaceId,
+    );
     if (!question)
       return jsonResponse({ error: "Question not found" }, { status: 404 });
 
@@ -1349,12 +1650,14 @@ export const handlers: ReturnType<typeof http.all>[] = [
       const body = (await request.json()) as QuestionPayload;
       if (!body.title?.trim())
         return jsonResponse({ error: "Question title is required" }, { status: 400 });
+      if (!body.workspace_id || !mockWorkspaces.some((item) => item.id === body.workspace_id))
+        return jsonResponse({ error: "A valid workspace_id is required" }, { status: 400 });
 
       const currentUser = mockUsers.find((u) => u.id === sessionId);
 
       const newQuestion: Question = {
         id: `q-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        workspace_id: body.workspace_id || "w1",
+        workspace_id: body.workspace_id,
         title: body.title.trim(),
         description: body.description?.trim() || "",
         author: body.author || currentUser?.name || "Phước (Lead)",
@@ -1378,7 +1681,13 @@ export const handlers: ReturnType<typeof http.all>[] = [
         return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
       const { id } = params;
-      const index = mockQuestions.findIndex((q) => q.id === id);
+      const workspaceId = getWorkspaceId(request);
+      if (!workspaceId)
+        return jsonResponse({ error: "workspace_id is required" }, { status: 400 });
+
+      const index = mockQuestions.findIndex(
+        (question) => question.id === id && question.workspace_id === workspaceId,
+      );
       if (index === -1)
         return jsonResponse({ error: "Question not found" }, { status: 404 });
 
@@ -1417,7 +1726,13 @@ export const handlers: ReturnType<typeof http.all>[] = [
           return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
         const { id, answerId } = params;
-        const qIndex = mockQuestions.findIndex((q) => q.id === id);
+        const workspaceId = getWorkspaceId(request);
+        if (!workspaceId)
+          return jsonResponse({ error: "workspace_id is required" }, { status: 400 });
+
+        const qIndex = mockQuestions.findIndex(
+          (question) => question.id === id && question.workspace_id === workspaceId,
+        );
         if (qIndex === -1)
           return jsonResponse({ error: "Question not found" }, { status: 404 });
 
@@ -1443,7 +1758,13 @@ export const handlers: ReturnType<typeof http.all>[] = [
         return jsonResponse({ error: "Unauthorized" }, { status: 401 });
 
       const { id } = params;
-      const index = mockQuestions.findIndex((q) => q.id === id);
+      const workspaceId = getWorkspaceId(request);
+      if (!workspaceId)
+        return jsonResponse({ error: "workspace_id is required" }, { status: 400 });
+
+      const index = mockQuestions.findIndex(
+        (question) => question.id === id && question.workspace_id === workspaceId,
+      );
       if (index === -1)
         return jsonResponse({ error: "Question not found" }, { status: 404 });
 

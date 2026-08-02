@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 
 type LoginForm = {
   email: string;
-  password?: string;
+  password: string;
 };
 
 export default function LoginPage() {
@@ -25,8 +25,12 @@ export default function LoginPage() {
     try {
       await login(data);
       router.push("/");
-    } catch (err: any) {
-      setErrorMsg(err?.message || "Invalid credentials. Please try again.");
+    } catch (error: unknown) {
+      setErrorMsg(
+        error instanceof Error
+          ? error.message
+          : "Invalid credentials. Please try again.",
+      );
     }
   };
 
@@ -69,8 +73,9 @@ export default function LoginPage() {
             id="password" 
             type="password" 
             placeholder="••••••••" 
-            {...register("password")} 
+            {...register("password", { required: "Password is required" })}
           />
+          {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
         </div>
 
         <Button type="submit" className="w-full" disabled={isLoading}>
@@ -79,7 +84,7 @@ export default function LoginPage() {
       </form>
 
       <p className="mt-6 text-sm text-center text-zinc-500 dark:text-zinc-400">
-        Don't have an account?{" "}
+        Don&apos;t have an account?{" "}
         <Link href="/signup" className="text-blue-600 hover:underline font-medium">
           Sign up
         </Link>

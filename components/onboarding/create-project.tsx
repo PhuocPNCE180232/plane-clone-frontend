@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ProjectInput, projectSchema } from "@/lib/validations/onboarding";
 import { Input } from "@/components/ui/input";
@@ -8,11 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
 export function CreateProject({ onNext, onSkip }: { onNext: (data: ProjectInput) => void, onSkip: () => void }) {
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<ProjectInput>({
+  const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<ProjectInput>({
     resolver: zodResolver(projectSchema),
   });
 
-  const name = watch("name");
+  const name = useWatch({ control, name: "name" });
 
   // Auto-generate identifier from project name (uppercase, max 5 chars)
   useEffect(() => {

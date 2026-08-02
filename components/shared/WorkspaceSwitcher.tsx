@@ -186,6 +186,7 @@ export const WorkspaceSwitcher = () => {
       {/* Edit Workspace Modal */}
       {currentWorkspace && (
         <EditWorkspaceModal
+          key={`${currentWorkspace.id}-${currentWorkspace.name}-${currentWorkspace.logo ?? ""}-${isEditModalOpen}`}
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           workspace={currentWorkspace}

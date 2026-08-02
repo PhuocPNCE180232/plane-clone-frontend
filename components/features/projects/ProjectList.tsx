@@ -1,8 +1,14 @@
 "use client";
 
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+
+import { issueKeys } from "@/hooks/use-issues";
 import { ProjectCard } from "./ProjectCard";
 import { useProjects } from "@/hooks/use-projects";
+import { getIssues } from "@/lib/services/issue.service";
+import type { Issue } from "@/types";
 
 interface ProjectListProps {
   searchQuery?: string;
@@ -10,9 +16,23 @@ interface ProjectListProps {
 }
 
 export const ProjectList = ({ searchQuery = "", activeTab = "all" }: ProjectListProps) => {
-  const { data: projects, isLoading } = useProjects();
+  const { data: projects, isLoading: isProjectsLoading } = useProjects();
+  const { data: issues = [], isLoading: isIssuesLoading } = useQuery<
+    Issue[],
+    Error
+  >({
+    queryKey: issueKeys.list(),
+    queryFn: () => getIssues(),
+  });
+  const issueCountByProjectId = useMemo(() => {
+    return issues.reduce<Map<string, number>>((counts, issue) => {
+      counts.set(issue.project_id, (counts.get(issue.project_id) ?? 0) + 1);
 
-  if (isLoading) {
+      return counts;
+    }, new Map());
+  }, [issues]);
+
+  if (isProjectsLoading || isIssuesLoading) {
     return (
       <div className="flex justify-center py-10">
         <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
@@ -61,7 +81,7 @@ export const ProjectList = ({ searchQuery = "", activeTab = "all" }: ProjectList
             title={project.name}
             description={project.description || "No description provided."}
             members={1} // Static fallback since API doesn't return members yet
-            issues={0}  // Static fallback since API doesn't return issues yet
+            issues={issueCountByProjectId.get(project.id) ?? 0}
             createdAt={project.createdAt}
           />
         ))}

@@ -17,6 +17,7 @@ import {
 import Link from "next/link";
 import { useAppStore } from "@/hooks/use-app-store";
 import { useEffect } from "react";
+import { useIssues } from "@/hooks/use-issues";
 
 export const ProjectOverview = () => {
   const params = useParams();
@@ -25,6 +26,11 @@ export const ProjectOverview = () => {
   const projectId = (params?.projectId as string) ?? "";
   
   const { data: projects, isLoading } = useProjects();
+  const {
+    data: issues = [],
+    isLoading: isIssuesLoading,
+    isError: isIssuesError,
+  } = useIssues(projectId);
   const { setProject, activeWorkspaceId } = useAppStore();
   
   const project = projects?.find((p) => p.id === projectId);
@@ -52,7 +58,7 @@ export const ProjectOverview = () => {
         </div>
         <h2 className="text-xl font-medium text-gray-900">Project not found</h2>
         <p className="mt-2 text-sm text-gray-500 max-w-sm">
-          The project you are looking for does not exist or you don't have permission to view it.
+          The project you are looking for does not exist or you don&apos;t have permission to view it.
         </p>
         <button
           onClick={() => router.push(`/${slug}/projects`)}
@@ -64,11 +70,29 @@ export const ProjectOverview = () => {
     );
   }
 
-  // Dummy stats for the UI
+  const projectIssues = issues.filter((issue) => issue.project_id === projectId);
   const stats = [
-    { label: "To Do", count: 12, icon: CircleDashed, color: "text-gray-500", bg: "bg-gray-100" },
-    { label: "In Progress", count: 5, icon: Clock, color: "text-amber-500", bg: "bg-amber-100" },
-    { label: "Done", count: 28, icon: CheckCircle2, color: "text-green-500", bg: "bg-green-100" },
+    {
+      label: "To Do",
+      count: projectIssues.filter((issue) => issue.state === "Todo").length,
+      icon: CircleDashed,
+      color: "text-gray-500",
+      bg: "bg-gray-100",
+    },
+    {
+      label: "In Progress",
+      count: projectIssues.filter((issue) => issue.state === "In Progress").length,
+      icon: Clock,
+      color: "text-amber-500",
+      bg: "bg-amber-100",
+    },
+    {
+      label: "Done",
+      count: projectIssues.filter((issue) => issue.state === "Done").length,
+      icon: CheckCircle2,
+      color: "text-green-500",
+      bg: "bg-green-100",
+    },
   ];
 
   return (
@@ -110,7 +134,7 @@ export const ProjectOverview = () => {
             Settings
           </Link>
           <Link
-            href={`/${slug}/issues`}
+            href={`/${slug}/projects/${projectId}/issues`}
             className="flex items-center gap-2 rounded-md bg-[#3f76ff] px-4 py-2 text-sm font-medium text-white hover:bg-[#2d63e8] transition-colors shadow-sm"
           >
             Go to Issues
@@ -129,18 +153,31 @@ export const ProjectOverview = () => {
               <BarChart2 className="h-5 w-5 text-gray-500" />
               <h2 className="font-medium text-gray-900">Issue Overview</h2>
             </div>
-            <div className="p-5 grid grid-cols-3 gap-4">
-              {stats.map((stat, i) => (
-                <div key={i} className="rounded-lg border border-gray-100 p-4 transition-colors hover:border-gray-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className={`rounded-md p-1.5 ${stat.bg}`}>
-                      <stat.icon className={`h-4 w-4 ${stat.color}`} />
-                    </div>
-                    <span className="text-sm font-medium text-gray-600">{stat.label}</span>
+            <div className="grid grid-cols-3 gap-4 p-5">
+              {isIssuesLoading ? (
+                Array.from({ length: 3 }, (_, index) => (
+                  <div key={index} className="rounded-lg border border-gray-100 p-4">
+                    <div className="mb-3 h-7 w-28 animate-pulse rounded bg-gray-100" />
+                    <div className="h-8 w-12 animate-pulse rounded bg-gray-100" />
                   </div>
-                  <div className="text-2xl font-semibold text-gray-900">{stat.count}</div>
-                </div>
-              ))}
+                ))
+              ) : isIssuesError ? (
+                <p className="col-span-3 text-sm text-red-600">
+                  Could not load issue overview. Please try again.
+                </p>
+              ) : (
+                stats.map((stat) => (
+                  <div key={stat.label} className="rounded-lg border border-gray-100 p-4 transition-colors hover:border-gray-200">
+                    <div className="mb-3 flex items-center gap-2">
+                      <div className={`rounded-md p-1.5 ${stat.bg}`}>
+                        <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                      </div>
+                      <span className="text-sm font-medium text-gray-600">{stat.label}</span>
+                    </div>
+                    <div className="text-2xl font-semibold text-gray-900">{stat.count}</div>
+                  </div>
+                ))
+              )}
             </div>
           </section>
 

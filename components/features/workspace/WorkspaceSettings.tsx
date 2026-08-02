@@ -5,7 +5,11 @@ import { useState, useEffect, useRef } from "react";
 import { Loader2, ChevronDown } from "lucide-react";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updateWorkspace, deleteWorkspace } from "@/lib/services/workspace.service";
+import {
+  updateWorkspace,
+  deleteWorkspace,
+  type UpdateWorkspaceDto,
+} from "@/lib/services/workspace.service";
 import { useAppStore } from "@/hooks/use-app-store";
 import { toast } from "@/hooks/use-toast";
 import { confirm } from "@/hooks/use-confirm";
@@ -34,13 +38,13 @@ export const WorkspaceSettings = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (workspace) {
-      setName(workspace.name);
-      setWorkspaceSlug(workspace.slug);
-      setLogo(workspace.logo || "🚀");
-    }
-  }, [workspace]);
+  const [formWorkspaceId, setFormWorkspaceId] = useState<string | undefined>();
+  if (workspace?.id !== formWorkspaceId) {
+    setFormWorkspaceId(workspace?.id);
+    setName(workspace?.name ?? "");
+    setWorkspaceSlug(workspace?.slug ?? "");
+    setLogo(workspace?.logo ?? "🚀");
+  }
 
   // Close emoji picker on outside click
   useEffect(() => {
@@ -54,7 +58,7 @@ export const WorkspaceSettings = () => {
   }, []);
 
   const { mutate: handleUpdateWorkspace, isPending: isUpdating } = useMutation({
-    mutationFn: (data: any) => updateWorkspace(workspace!.id, data),
+    mutationFn: (data: UpdateWorkspaceDto) => updateWorkspace(workspace!.id, data),
     onSuccess: (updatedWs) => {
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
       toast.success("Workspace updated successfully.");

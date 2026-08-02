@@ -1,9 +1,7 @@
 import {
-  Activity,
   BarChart2,
   Boxes,
   CalendarDays,
-  RefreshCw,
   ShieldCheck,
 } from "lucide-react";
 
@@ -13,47 +11,50 @@ import { AnalyticsSectionTitle } from "../AnalyticsSectionTitle";
 import { AnalyticsSimpleBarChart } from "../AnalyticsSimpleBarChart";
 
 import type { Module } from "@/lib/services/module.service";
-import type { Project } from "@/types";
+import { getIssueProgress } from "@/lib/issue-progress";
+import {
+  getModuleLifecycleLabel,
+  getModuleLifecycleStatus,
+} from "@/lib/module-lifecycle";
+import type { Issue, Project } from "@/types";
 
 import { getFormattedDate } from "../analytics.helpers";
 
 interface ModulesAnalyticsTabProps {
   modules: Module[];
   projects: Project[];
+  issues: Issue[];
 }
 
 export const ModulesAnalyticsTab = ({
   modules,
   projects,
+  issues,
 }: ModulesAnalyticsTabProps) => {
   const projectMap = new Map(
     projects.map((project) => [project.id, project]),
   );
 
-  const moduleRows = modules.map((module) => ({
-    module,
-    status: module.status ?? "Backlog",
-  }));
+  const moduleRows = modules.map((module) => {
+    const progress = getIssueProgress(
+      issues.filter((issue) => issue.module_id === module.id),
+    );
 
-  const completedModules = moduleRows.filter(
-    (row) => row.status === "Completed",
-  );
+    return {
+      module,
+      status: getModuleLifecycleStatus(module, progress),
+      progress: progress.percent,
+    };
+  });
 
-  const inProgressModules = moduleRows.filter(
-    (row) => row.status === "In Progress",
-  );
-
-  const plannedModules = moduleRows.filter(
-    (row) => row.status === "Planned",
-  );
-
-  const pausedModules = moduleRows.filter(
-    (row) => row.status === "Paused",
+  const doneModules = moduleRows.filter((row) => row.status === "done");
+  const upcomingModules = moduleRows.filter(
+    (row) => row.status === "upcoming",
   );
 
   const progressStats = moduleRows.map((row) => ({
     label: row.module.name,
-    count: row.module.progress ?? 0,
+    count: row.progress,
   }));
 
   return (
@@ -70,27 +71,15 @@ export const ModulesAnalyticsTab = ({
           },
           {
             icon: <ShieldCheck className="h-4 w-4" />,
-            label: "Completed Modules",
-            value: completedModules.length,
-            helper: "Completed modules",
-          },
-          {
-            icon: <Activity className="h-4 w-4" />,
-            label: "In progress Modules",
-            value: inProgressModules.length,
-            helper: "Currently active",
+            label: "Done Modules",
+            value: doneModules.length,
+            helper: "Completed work items or completed modules",
           },
           {
             icon: <CalendarDays className="h-4 w-4" />,
-            label: "Planned Modules",
-            value: plannedModules.length,
-            helper: "Planned modules",
-          },
-          {
-            icon: <RefreshCw className="h-4 w-4" />,
-            label: "Paused Modules",
-            value: pausedModules.length,
-            helper: "Paused modules",
+            label: "Upcoming Modules",
+            value: upcomingModules.length,
+            helper: "Modules with work still to complete",
           },
         ]}
       />
@@ -124,11 +113,11 @@ export const ModulesAnalyticsTab = ({
               id: row.module.id,
               cells: [
                 row.module.name,
-                row.status,
+                getModuleLifecycleLabel(row.status),
                 project?.name ?? row.module.project_id,
                 getFormattedDate(row.module.start_date),
                 getFormattedDate(row.module.end_date),
-                `${row.module.progress ?? 0}%`,
+                `${row.progress}%`,
               ],
             };
           })}

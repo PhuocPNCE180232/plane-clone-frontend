@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ChevronRight,
   Trash2,
@@ -13,7 +14,6 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import type { QuestionAnswer } from "@/types";
 import { useWorkspaces } from "@/hooks/use-workspaces";
-import { useAppStore } from "@/hooks/use-app-store";
 import {
   useQuestion,
   useDeleteQuestionMutation,
@@ -23,19 +23,24 @@ import {
 import { confirm } from "@/hooks/use-confirm";
 import { toast } from "@/hooks/use-toast";
 
-export const QuestionDetail = () => {
-  const params        = useParams();
-  const router        = useRouter();
-  const questionId    = (params?.questionId as string) ?? "";
-  const workspaceSlug = (params?.workspaceSlug as string) ?? "workspaceSlug";
+type QuestionDetailProps = {
+  workspaceSlug: string;
+  questionId: string;
+};
 
-  const { data: workspaces } = useWorkspaces();
-  const activeWorkspaceId    = useAppStore((state) => state.activeWorkspaceId);
-  const activeWorkspace      = workspaces?.find((w) => w.id === activeWorkspaceId);
+export const QuestionDetail = ({
+  workspaceSlug,
+  questionId,
+}: QuestionDetailProps) => {
+  const router        = useRouter();
+
+  const { data: workspaces, isLoading: isLoadingWorkspaces } = useWorkspaces();
+  const workspace = workspaces?.find((item) => item.slug === workspaceSlug);
+  const workspaceId = workspace?.id;
 
   const [answerText, setAnswerText] = useState("");
 
-  const { data: question, isLoading } = useQuestion(questionId);
+  const { data: question, isLoading } = useQuestion(questionId, workspaceId);
 
   const { mutate: handleDeleteQuestion, isPending: isDeletingQuestion } =
     useDeleteQuestionMutation();
@@ -58,7 +63,9 @@ export const QuestionDetail = () => {
 
     if (!ok) return;
 
-    handleDeleteQuestion(question.id, {
+    handleDeleteQuestion(
+      { questionId: question.id, workspaceId: question.workspace_id },
+      {
       onSuccess: () => {
         toast.success("Question deleted successfully.");
         router.push(`/${workspaceSlug}/questions`);
@@ -70,14 +77,19 @@ export const QuestionDetail = () => {
           "Failed to delete question. Please try again.";
         toast.error(message);
       },
-    });
+      },
+    );
   };
 
   const onSubmitAnswer = () => {
-    if (!answerText.trim() || !questionId) return;
+    if (!answerText.trim() || !question) return;
 
     handleAddAnswer(
-      { questionId, data: { content: answerText.trim() } },
+      {
+        questionId,
+        workspaceId: question.workspace_id,
+        data: { content: answerText.trim() },
+      },
       {
         onSuccess: () => {
           setAnswerText("");
@@ -95,6 +107,8 @@ export const QuestionDetail = () => {
   };
 
   const onDeleteAnswer = async (answerId: string) => {
+    if (!question) return;
+
     const ok = await confirm({
       title:       "Delete Answer",
       description: "Are you sure you want to delete this answer?",
@@ -106,7 +120,7 @@ export const QuestionDetail = () => {
     if (!ok) return;
 
     handleDeleteAnswer(
-      { questionId, answerId },
+      { questionId, answerId, workspaceId: question.workspace_id },
       {
         onSuccess: () => {
           toast.success("Answer deleted.");
@@ -123,7 +137,7 @@ export const QuestionDetail = () => {
   };
 
   // ── Loading state ────────────────────────────────────────────────────────
-  if (isLoading) {
+  if (isLoading || isLoadingWorkspaces) {
     return (
       <div className="flex justify-center py-20">
         <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
@@ -171,7 +185,7 @@ export const QuestionDetail = () => {
           href={`/${workspaceSlug}`}
           className="transition-colors hover:text-gray-900"
         >
-          {activeWorkspace?.name || "Workspace"}
+          {workspace?.name || "Workspace"}
         </Link>
         <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
         <Link
@@ -190,9 +204,11 @@ export const QuestionDetail = () => {
       <div className="group rounded-xl border border-gray-200 bg-white p-6 shadow-sm mb-6">
         <div className="flex items-center justify-between border-b border-gray-100 pb-4">
           <div className="flex items-center gap-3">
-            <img
+            <Image
               src={question.avatar}
               alt={question.author}
+              width={36}
+              height={36}
               className="h-9 w-9 rounded-full object-cover border border-gray-200 shrink-0"
             />
             <div>
@@ -322,9 +338,11 @@ const AnswerRow = ({ answer, onDelete }: AnswerRowProps) => {
   return (
     <div className="group/ans flex items-start justify-between gap-3 rounded-xl bg-gray-50/70 p-4 border border-gray-100 transition-all hover:border-gray-200 hover:bg-gray-50">
       <div className="flex items-start gap-3 min-w-0 flex-1">
-        <img
+        <Image
           src={answer.avatar}
           alt={answer.author}
+          width={28}
+          height={28}
           className="h-7 w-7 rounded-full object-cover border border-gray-200 shrink-0 mt-0.5"
         />
         <div className="min-w-0 flex-1">

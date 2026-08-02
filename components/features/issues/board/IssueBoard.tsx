@@ -28,11 +28,12 @@ export default function IssueBoard({
   issues,
   reload,
 }: Props) {
-  const states = [
+  const states: Issue["state"][] = [
     "Backlog",
     "Todo",
     "In Progress",
     "Done",
+    "Cancelled",
   ];
 
   const handleDragEnd = async (
@@ -43,13 +44,19 @@ export default function IssueBoard({
     if (!over) return;
 
     const issueId = String(active.id);
-    const newState = String(over.id);
+    const overId = String(over.id);
 
     const issue = issues.find(
       (i) => i.id === issueId
     );
 
     if (!issue) return;
+
+    const newState =
+      states.find((state) => state === overId) ??
+      issues.find((issue) => issue.id === overId)?.state;
+
+    if (!newState) return;
 
     if (issue.state === newState) return;
 

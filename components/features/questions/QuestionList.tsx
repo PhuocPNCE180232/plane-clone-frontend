@@ -5,11 +5,12 @@ import { useQuestions } from "@/hooks/use-questions";
 import { QuestionCard } from "./QuestionCard";
 
 interface QuestionListProps {
+  workspaceId?: string;
   searchQuery: string;
 }
 
-export const QuestionList = ({ searchQuery }: QuestionListProps) => {
-  const { data: questions, isLoading } = useQuestions();
+export const QuestionList = ({ workspaceId, searchQuery }: QuestionListProps) => {
+  const { data: questions, isLoading } = useQuestions(workspaceId);
 
   // ── Loading ─────────────────────────────────────────────────────────────
   if (isLoading) {

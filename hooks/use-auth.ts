@@ -64,7 +64,7 @@ export const useAuth = create<AuthState>()(
         try {
           const response = await getMe();
           set({ user: response.user, isAuthenticated: true, isLoading: false });
-        } catch (error) {
+        } catch {
           set({ user: null, isAuthenticated: false, isLoading: false });
         }
       },

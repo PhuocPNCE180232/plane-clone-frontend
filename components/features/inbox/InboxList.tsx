@@ -5,12 +5,17 @@ import { useInbox } from "@/hooks/use-inbox";
 import { InboxItem } from "./InboxItem";
 
 interface InboxListProps {
+  workspaceId?: string;
   searchQuery: string;
   activeTab: "all" | "unread";
 }
 
-export const InboxList = ({ searchQuery, activeTab }: InboxListProps) => {
-  const { data: notifications, isLoading } = useInbox();
+export const InboxList = ({
+  workspaceId,
+  searchQuery,
+  activeTab,
+}: InboxListProps) => {
+  const { data: notifications, isLoading } = useInbox(workspaceId);
 
   // ── Loading ─────────────────────────────────────────────────────────────
   if (isLoading) {

@@ -16,26 +16,32 @@ import type { Question } from "@/types";
 export const questionKeys = {
   all:     ["questions"] as const,
   lists:   () => [...questionKeys.all, "list"] as const,
-  list:    () => [...questionKeys.lists()] as const,
+  list:    (workspaceId?: string | null) =>
+    [...questionKeys.lists(), workspaceId ?? "none"] as const,
   details: () => [...questionKeys.all, "detail"] as const,
-  detail:  (id: string) => [...questionKeys.details(), id] as const,
+  detail:  (id: string, workspaceId?: string | null) =>
+    [...questionKeys.details(), workspaceId ?? "none", id] as const,
 };
 
 // ─── Hooks ─────────────────────────────────────────────────────────────────
 
-/** Returns all questions. */
-export const useQuestions = () =>
+/** Returns questions for the selected workspace. */
+export const useQuestions = (workspaceId?: string) =>
   useQuery({
-    queryKey: questionKeys.list(),
-    queryFn:  getQuestions,
+    queryKey: questionKeys.list(workspaceId),
+    queryFn: async () => {
+      const questions = await getQuestions(workspaceId as string);
+      return questions.filter((question) => question.workspace_id === workspaceId);
+    },
+    enabled: !!workspaceId,
   });
 
 /** Returns a single question by ID. */
-export const useQuestion = (id: string) =>
+export const useQuestion = (id: string, workspaceId?: string) =>
   useQuery({
-    queryKey: questionKeys.detail(id),
-    queryFn:  () => getQuestion(id),
-    enabled:  !!id,
+    queryKey: questionKeys.detail(id, workspaceId),
+    queryFn:  () => getQuestion(id, workspaceId as string),
+    enabled:  !!id && !!workspaceId,
   });
 
 /**
@@ -48,8 +54,10 @@ export const useCreateQuestionMutation = () => {
   return useMutation<Question, Error, CreateQuestionDto>({
     mutationFn: createQuestion,
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: questionKeys.list() });
+    onSuccess: (_question, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: questionKeys.list(variables.workspace_id),
+      });
     },
 
     onError: (error) => {
@@ -68,13 +76,16 @@ export const useAddAnswerMutation = () => {
   return useMutation<
     Question,
     Error,
-    { questionId: string; data: AddAnswerDto }
+    { questionId: string; workspaceId: string; data: AddAnswerDto }
   >({
-    mutationFn: ({ questionId, data }) => addAnswer(questionId, data),
+    mutationFn: ({ questionId, workspaceId, data }) =>
+      addAnswer(questionId, workspaceId, data),
 
-    onSuccess: (_, { questionId }) => {
-      queryClient.invalidateQueries({ queryKey: questionKeys.list() });
-      queryClient.invalidateQueries({ queryKey: questionKeys.detail(questionId) });
+    onSuccess: (_, { questionId, workspaceId }) => {
+      queryClient.invalidateQueries({ queryKey: questionKeys.list(workspaceId) });
+      queryClient.invalidateQueries({
+        queryKey: questionKeys.detail(questionId, workspaceId),
+      });
     },
 
     onError: (error) => {
@@ -93,13 +104,16 @@ export const useDeleteAnswerMutation = () => {
   return useMutation<
     void,
     Error,
-    { questionId: string; answerId: string }
+    { questionId: string; answerId: string; workspaceId: string }
   >({
-    mutationFn: ({ questionId, answerId }) => deleteAnswer(questionId, answerId),
+    mutationFn: ({ questionId, answerId, workspaceId }) =>
+      deleteAnswer(questionId, answerId, workspaceId),
 
-    onSuccess: (_, { questionId }) => {
-      queryClient.invalidateQueries({ queryKey: questionKeys.list() });
-      queryClient.invalidateQueries({ queryKey: questionKeys.detail(questionId) });
+    onSuccess: (_, { questionId, workspaceId }) => {
+      queryClient.invalidateQueries({ queryKey: questionKeys.list(workspaceId) });
+      queryClient.invalidateQueries({
+        queryKey: questionKeys.detail(questionId, workspaceId),
+      });
     },
 
     onError: (error) => {
@@ -115,11 +129,14 @@ export const useDeleteAnswerMutation = () => {
 export const useDeleteQuestionMutation = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<void, Error, string>({
-    mutationFn: deleteQuestion,
+  return useMutation<void, Error, { questionId: string; workspaceId: string }>({
+    mutationFn: ({ questionId, workspaceId }) =>
+      deleteQuestion(questionId, workspaceId),
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: questionKeys.list() });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: questionKeys.list(variables.workspaceId),
+      });
     },
 
     onError: (error) => {

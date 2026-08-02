@@ -15,7 +15,8 @@ import type { Notification } from "@/types";
 export const inboxKeys = {
   all:   ["inbox"] as const,
   lists: () => [...inboxKeys.all, "list"] as const,
-  list:  () => [...inboxKeys.lists()] as const,
+  list:  (workspaceId?: string | null) =>
+    [...inboxKeys.lists(), workspaceId ?? "none"] as const,
 };
 
 // ─── Hooks ─────────────────────────────────────────────────────────────────
@@ -24,10 +25,16 @@ export const inboxKeys = {
  * Returns all notifications for the current workspace.
  * No enabled guard needed — inbox is always accessible from the sidebar.
  */
-export const useInbox = () =>
+export const useInbox = (workspaceId?: string) =>
   useQuery({
-    queryKey: inboxKeys.list(),
-    queryFn:  getNotifications,
+    queryKey: inboxKeys.list(workspaceId),
+    queryFn: async () => {
+      const notifications = await getNotifications(workspaceId as string);
+      return notifications.filter(
+        (notification) => notification.workspace_id === workspaceId,
+      );
+    },
+    enabled: !!workspaceId,
   });
 
 /**
@@ -38,11 +45,18 @@ export const useInbox = () =>
 export const useMarkAsReadMutation = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<Notification, Error, string>({
-    mutationFn: markAsRead,
+  return useMutation<
+    Notification,
+    Error,
+    { notificationId: string; workspaceId: string }
+  >({
+    mutationFn: ({ notificationId, workspaceId }) =>
+      markAsRead(notificationId, workspaceId),
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: inboxKeys.list() });
+    onSuccess: (_notification, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: inboxKeys.list(variables.workspaceId),
+      });
     },
 
     onError: (error) => {
@@ -58,11 +72,11 @@ export const useMarkAsReadMutation = () => {
 export const useMarkAllAsReadMutation = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<{ success: boolean }, Error, void>({
-    mutationFn: () => markAllAsRead(),
+  return useMutation<{ success: boolean }, Error, string>({
+    mutationFn: markAllAsRead,
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: inboxKeys.list() });
+    onSuccess: (_result, workspaceId) => {
+      queryClient.invalidateQueries({ queryKey: inboxKeys.list(workspaceId) });
     },
 
     onError: (error) => {
@@ -79,11 +93,18 @@ export const useMarkAllAsReadMutation = () => {
 export const useDeleteNotificationMutation = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<void, Error, string>({
-    mutationFn: deleteNotification,
+  return useMutation<
+    void,
+    Error,
+    { notificationId: string; workspaceId: string }
+  >({
+    mutationFn: ({ notificationId, workspaceId }) =>
+      deleteNotification(notificationId, workspaceId),
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: inboxKeys.list() });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: inboxKeys.list(variables.workspaceId),
+      });
     },
 
     onError: (error) => {

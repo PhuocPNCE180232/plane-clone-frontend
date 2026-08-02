@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/Card";
-import { Cycle, Issue } from "@/mocks/db";
-import { deleteCycle, updateCycle } from "@/lib/services/cycle.service";
+import { deleteCycle, updateCycle, type Cycle } from "@/lib/services/cycle.service";
+import type { Issue } from "@/types";
+import { getIssueProgress } from "@/lib/issue-progress";
 import { CycleProgressBar } from "./CycleProgressBar";
 import { CycleStatusBadge } from "./CycleStatusBadge";
 import { toast } from "@/hooks/use-toast";
@@ -33,7 +34,9 @@ function getDaysLeft(endDate: string): number {
 
 export const CycleCard = ({ cycle, issues }: CycleCardProps) => {
   const params = useParams<{ workspaceSlug: string }>();
-  const href = params?.workspaceSlug ? `/${params.workspaceSlug}/cycles/${cycle.id}` : `/cycles/${cycle.id}`;
+  const href = params?.workspaceSlug
+    ? `/${params.workspaceSlug}/projects/${cycle.project_id}/cycles/${cycle.id}`
+    : `/projects/${cycle.project_id}/cycles/${cycle.id}`;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -51,11 +54,11 @@ export const CycleCard = ({ cycle, issues }: CycleCardProps) => {
     },
   });
 
-  const totalIssues     = issues.length;
-  const completedIssues = issues.filter((i) => i.state === "Done").length;
-  const progressPercent = cycle.progress ?? (totalIssues > 0
-    ? Math.round((completedIssues / totalIssues) * 100)
-    : 0);
+  const {
+    total: totalIssues,
+    completed: completedIssues,
+    percent: progressPercent,
+  } = getIssueProgress(issues);
   const daysLeft = getDaysLeft(cycle.end_date);
 
   const daysLabel =
@@ -107,7 +110,9 @@ export const CycleCard = ({ cycle, issues }: CycleCardProps) => {
             <div className="absolute right-0 top-full mt-2 w-40 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl z-20">
               <button
                 type="button"
-                onClick={() => {
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
                   setIsEditOpen(true);
                   setIsMenuOpen(false);
                 }}
@@ -117,7 +122,11 @@ export const CycleCard = ({ cycle, issues }: CycleCardProps) => {
               </button>
               <button
                 type="button"
-                onClick={onDelete}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  void onDelete();
+                }}
                 disabled={isDeleting}
                 className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-red-600 hover:bg-gray-50 disabled:opacity-50"
               >

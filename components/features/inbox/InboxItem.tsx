@@ -64,17 +64,23 @@ export const InboxItem = ({ notification }: InboxItemProps) => {
   // ── Handlers — inline onSuccess/onError (MemberRow / PageRow pattern) ──
 
   const onMarkRead = () => {
-    markRead(notification.id, {
+    markRead(
+      { notificationId: notification.id, workspaceId: notification.workspace_id },
+      {
       onSuccess: () => toast.success("Notification marked as read."),
       onError:   () => toast.error("Failed to mark as read."),
-    });
+      },
+    );
   };
 
   const onDelete = () => {
-    deleteNotif(notification.id, {
+    deleteNotif(
+      { notificationId: notification.id, workspaceId: notification.workspace_id },
+      {
       onSuccess: () => toast.success("Notification deleted."),
       onError:   () => toast.error("Failed to delete notification."),
-    });
+      },
+    );
   };
 
   return (

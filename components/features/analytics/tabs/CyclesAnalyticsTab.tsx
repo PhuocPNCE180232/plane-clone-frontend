@@ -12,7 +12,8 @@ import { AnalyticsSectionTitle } from "../AnalyticsSectionTitle";
 import { AnalyticsSimpleBarChart } from "../AnalyticsSimpleBarChart";
 
 import type { Cycle } from "@/lib/services/cycle.service";
-import type { Project } from "@/types";
+import { getIssueProgress } from "@/lib/issue-progress";
+import type { Issue, Project } from "@/types";
 
 import {
   getCycleStatus,
@@ -22,20 +23,29 @@ import {
 interface CyclesAnalyticsTabProps {
   cycles: Cycle[];
   projects: Project[];
+  issues: Issue[];
 }
 
 export const CyclesAnalyticsTab = ({
   cycles,
   projects,
+  issues,
 }: CyclesAnalyticsTabProps) => {
   const projectMap = new Map(
     projects.map((project) => [project.id, project]),
   );
 
-  const cycleRows = cycles.map((cycle) => ({
-    cycle,
-    status: getCycleStatus(cycle),
-  }));
+  const cycleRows = cycles.map((cycle) => {
+    const progress = getIssueProgress(
+      issues.filter((issue) => issue.cycle_id === cycle.id),
+    ).percent;
+
+    return {
+      cycle,
+      status: getCycleStatus(cycle, progress),
+      progress,
+    };
+  });
 
   const currentCycles = cycleRows.filter(
     (row) => row.status === "Current",
@@ -51,7 +61,7 @@ export const CyclesAnalyticsTab = ({
 
   const progressStats = cycleRows.map((row) => ({
     label: row.cycle.name,
-    count: row.cycle.progress ?? 0,
+    count: row.progress,
   }));
 
   return (
@@ -120,7 +130,7 @@ export const CyclesAnalyticsTab = ({
                 project?.name ?? row.cycle.project_id,
                 getFormattedDate(row.cycle.start_date),
                 getFormattedDate(row.cycle.end_date),
-                `${row.cycle.progress ?? 0}%`,
+                `${row.progress}%`,
               ],
             };
           })}

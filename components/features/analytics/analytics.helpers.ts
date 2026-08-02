@@ -33,15 +33,15 @@ export const MODULE_STATUSES: NonNullable<Module["status"]>[] = [
 ];
 
 export const getIssueProjectId = (issue: Issue) => {
-  return issue.project_id || issue.projectId || "";
+  return issue.project_id;
 };
 
 export const getIssueAssigneeId = (issue: Issue) => {
-  return issue.assignee_id || issue.assigneeId || "";
+  return issue.assignee_id ?? "";
 };
 
 export const getIssueDate = (issue: Issue) => {
-  return issue.created_at || issue.createdAt || "";
+  return issue.created_at;
 };
 
 export const getFormattedDate = (value?: string) => {
@@ -60,12 +60,12 @@ export const getCompletionLabel = (completed: number, total: number) => {
   return `${Math.round((completed / total) * 100)}%`;
 };
 
-export const getCycleStatus = (cycle: Cycle) => {
+export const getCycleStatus = (cycle: Cycle, progress: number) => {
   const now = new Date();
   const startDate = new Date(cycle.start_date);
   const endDate = new Date(cycle.end_date);
 
-  if ((cycle.progress ?? 0) >= 100) return "Completed";
+  if (progress >= 100) return "Completed";
   if (startDate > now) return "Upcoming";
   if (endDate < now) return "Completed";
 

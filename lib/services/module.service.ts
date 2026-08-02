@@ -28,7 +28,6 @@ export interface Module {
   project_id: string;
   name: string;
   description?: string;
-  progress?: number;
   status?: "Backlog" | "Planned" | "In Progress" | "Paused" | "Completed" | "Cancelled";
   start_date?: string;
   end_date?: string;
@@ -44,9 +43,9 @@ export type UpdateModuleDto = Partial<CreateModuleDto>;
 
 // ─── Service functions ─────────────────────────────────────────────────────
 
-/** Returns all modules. */
-export const getModules = (): Promise<Module[]> =>
-  get<Module[]>("/modules");
+/** Returns all modules, optionally scoped to a project. */
+export const getModules = (projectId?: string): Promise<Module[]> =>
+  get<Module[]>(projectId ? `/modules?project_id=${encodeURIComponent(projectId)}` : "/modules");
 
 /** Returns a single module by its ID. */
 export const getModuleById = (id: string): Promise<Module> =>

@@ -1,7 +1,7 @@
 "use client";
 
 import { X, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRenamePageMutation } from "@/hooks/use-pages";
 import { toast } from "@/hooks/use-toast";
 import type { Page } from "@/types";
@@ -21,12 +21,8 @@ export const RenamePageModal = ({
   page,
   projectId,
 }: RenamePageModalProps) => {
-  // Pre-fill with the current page name whenever the modal opens.
-  // useEffect syncs name if the page prop changes while the modal is mounted.
+  // The keyed modal instance is initialized with the current page name on open.
   const [name, setName] = useState(page.name);
-  useEffect(() => {
-    if (isOpen) setName(page.name);
-  }, [isOpen, page.name]);
 
   const { mutate: handleRename, isPending } = useRenamePageMutation();
 

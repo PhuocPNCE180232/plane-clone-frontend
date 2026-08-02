@@ -3,11 +3,12 @@
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { ArrowUpDown, LayoutGrid, List, ListFilter, Plus } from "lucide-react";
 import { ModuleForm } from "./ModuleForm";
+import type { ModuleFilterStatus } from "@/lib/module-lifecycle";
 
 type SortKey = "name" | "progress" | "work_items" | "due_date";
-type ModuleFilterStatus = "all" | "backlog" | "planned" | "in_progress" | "paused" | "completed" | "cancelled";
 
 type ModuleToolbarProps = {
+  projectId: string;
   view: "board" | "list";
   setView: Dispatch<SetStateAction<"board" | "list">>;
   sortKey: SortKey;
@@ -19,6 +20,7 @@ type ModuleToolbarProps = {
 };
 
 export const ModuleToolbar = ({
+  projectId,
   view,
   setView,
   sortKey,
@@ -41,24 +43,16 @@ export const ModuleToolbar = ({
 
   const filterLabelMap: Record<ModuleFilterStatus, string> = {
     all: "All",
-    backlog: "Backlog",
-    planned: "Planned",
-    in_progress: "In progress",
-    paused: "Paused",
-    completed: "Completed",
-    cancelled: "Cancelled",
+    upcoming: "Upcoming",
+    done: "Done",
   };
 
   const currentSortLabel = sortLabelMap[sortKey];
   const currentFilterLabel = filterLabelMap[filterStatus];
   const filterOptions: Array<{ value: ModuleFilterStatus; label: string }> = [
     { value: "all", label: "All modules" },
-    { value: "backlog", label: "Backlog" },
-    { value: "planned", label: "Planned" },
-    { value: "in_progress", label: "In progress" },
-    { value: "paused", label: "Paused" },
-    { value: "completed", label: "Completed" },
-    { value: "cancelled", label: "Cancelled" },
+    { value: "upcoming", label: "Upcoming" },
+    { value: "done", label: "Done" },
   ];
 
   return (
@@ -254,7 +248,7 @@ export const ModuleToolbar = ({
               </button>
             </div>
 
-            <ModuleForm onClose={() => setIsFormOpen(false)} />
+            <ModuleForm projectId={projectId} onClose={() => setIsFormOpen(false)} />
           </div>
         </div>
       )}

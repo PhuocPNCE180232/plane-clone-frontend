@@ -1,5 +1,13 @@
 import { IssuePage } from "@/components/features/issues/IssuePage";
 
-export default function IssuesPage() {
-  return <IssuePage projectId="p1" />;
+interface IssuesPageProps {
+  params: Promise<{
+    projectId: string;
+  }>;
+}
+
+export default async function IssuesPage({ params }: IssuesPageProps) {
+  const { projectId } = await params;
+
+  return <IssuePage projectId={projectId} />;
 }

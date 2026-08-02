@@ -7,11 +7,13 @@ import { toast } from "@/hooks/use-toast";
 
 type CreateQuestionModalProps = {
   isOpen: boolean;
+  workspaceId?: string;
   onClose: () => void;
 };
 
 export const CreateQuestionModal = ({
   isOpen,
+  workspaceId,
   onClose,
 }: CreateQuestionModalProps) => {
   const [title, setTitle]             = useState("");
@@ -26,10 +28,14 @@ export const CreateQuestionModal = ({
   };
 
   const onSubmit = () => {
-    if (!title.trim()) return;
+    if (!title.trim() || !workspaceId) return;
 
     createQuestionMutate(
-      { title: title.trim(), description: description.trim() },
+      {
+        title: title.trim(),
+        description: description.trim(),
+        workspace_id: workspaceId,
+      },
       {
         onSuccess: () => {
           toast.success("Question published successfully.");
@@ -114,7 +120,7 @@ export const CreateQuestionModal = ({
           </button>
           <button
             onClick={onSubmit}
-            disabled={isPending || !title.trim()}
+            disabled={isPending || !title.trim() || !workspaceId}
             className="flex items-center justify-center min-w-[90px] rounded-md bg-[#3f76ff] px-4 py-2 text-sm font-medium text-white hover:bg-[#2d63e8] transition-colors disabled:opacity-50"
           >
             {isPending ? (

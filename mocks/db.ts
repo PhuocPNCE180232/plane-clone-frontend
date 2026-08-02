@@ -74,7 +74,6 @@ export interface Cycle {
   description?: string;
   start_date: string;
   end_date: string;
-  progress?: number; 
 }
 
 export interface Module {
@@ -82,7 +81,6 @@ export interface Module {
   project_id: string;
   name: string;
   description: string;
-  progress?: number; 
   status?: "Backlog" | "Planned" | "In Progress" | "Paused" | "Completed" | "Cancelled";
   start_date?: string;
   end_date?: string;
@@ -110,7 +108,7 @@ export interface CustomView {
   id: string;
   project_id: string;
   name: string;
-  filters: Record<string, any>;
+  filters: Record<string, unknown>;
   created_at: string;
 }
 
@@ -186,7 +184,7 @@ function loadFromStorage<T>(key: string, fallback: T): T {
   }
 }
 
-export const saveToStorage = (key: string, value: any) => {
+export const saveToStorage = (key: string, value: unknown) => {
   if (!isBrowser) return;
   localStorage.setItem(key, JSON.stringify(value));
 };
@@ -247,7 +245,7 @@ const defaultUsers: User[] = [
 
 const storedUsers = loadFromStorage<User[]>("mockUsers", defaultUsers);
 const needsMigration = storedUsers.some((u) => !u.password);
-export let mockUsers: User[] = needsMigration ? defaultUsers : storedUsers;
+export const mockUsers: User[] = needsMigration ? defaultUsers : storedUsers;
 if (needsMigration && isBrowser) saveToStorage("mockUsers", defaultUsers);
 
 // Bảng Workspaces
@@ -283,7 +281,7 @@ if (isBrowser) {
   if (hasChanges) saveToStorage("mockWorkspaces", storedWorkspaces);
 }
 
-export let mockWorkspaces: Workspace[] = storedWorkspaces;
+export const mockWorkspaces: Workspace[] = storedWorkspaces;
 
 // Bảng Projects
 const defaultProjects: Project[] = [
@@ -360,7 +358,6 @@ const defaultModules: Module[] = [
     project_id: "p1",
     name: "Auth & User",
     description: "Tính năng đăng nhập và quản lý user",
-    progress: 0,
     status: "Backlog",
     start_date: "2026-06-29",
     end_date: "2026-07-05",
@@ -370,7 +367,6 @@ const defaultModules: Module[] = [
     project_id: "p1",
     name: "Core Features",
     description: "Các tính năng Kanban, Issue",
-    progress: 35,
     status: "In Progress",
     start_date: "2026-07-06",
     end_date: "2026-07-12",
@@ -380,14 +376,13 @@ const defaultModules: Module[] = [
     project_id: "p1",
     name: "UI Components",
     description: "Các thành phần giao diện",
-    progress: 100,
     status: "Completed",
     start_date: "2026-06-15",
     end_date: "2026-06-30",
   },
 ];
 
-let storedModules = loadFromStorage<Module[]>("mockModules", defaultModules);
+const storedModules = loadFromStorage<Module[]>("mockModules", defaultModules);
 export let mockModules: Module[] = storedModules;
 
 if (isBrowser) {
@@ -405,7 +400,6 @@ const defaultCycles: Cycle[] = [
     name: "Cycle 1: Tuần 1",
     start_date: "2026-06-29",
     end_date: "2026-07-05",
-    progress: 45,
   },
   {
     id: "c2",
@@ -413,11 +407,10 @@ const defaultCycles: Cycle[] = [
     name: "Cycle 2: Tuần 2",
     start_date: "2026-07-06",
     end_date: "2026-07-12",
-    progress: 20,
   },
 ];
 
-let storedCycles = loadFromStorage<Cycle[]>("mockCycles", defaultCycles);
+const storedCycles = loadFromStorage<Cycle[]>("mockCycles", defaultCycles);
 export let mockCycles: Cycle[] = storedCycles;
 
 if (isBrowser) {
@@ -470,7 +463,7 @@ defaultIssues.forEach((issue) => {
   }
 });
 
-export let mockIssues: Issue[] = Array.from(issueMap.values());
+export const mockIssues: Issue[] = Array.from(issueMap.values());
 
 if (isBrowser) {
   saveToStorage("mockIssues", mockIssues);
@@ -570,7 +563,7 @@ defaultComments.forEach((comment) => {
   }
 });
 
-export let mockComments: Comment[] = Array.from(commentMap.values());
+export const mockComments: Comment[] = Array.from(commentMap.values());
 
 if (isBrowser) {
   saveToStorage("mockComments", mockComments);
@@ -602,7 +595,7 @@ const defaultMembers: Member[] = [
     joined_at: new Date(Date.now() - 3600000 * 24 * 2).toISOString(),
   },
 ];
-export let mockMembers: Member[] = loadFromStorage<Member[]>(
+export const mockMembers: Member[] = loadFromStorage<Member[]>(
   "mockMembers",
   defaultMembers,
 );
@@ -620,7 +613,7 @@ const defaultPages: Page[] = [
     updated_at: new Date().toISOString(),
   },
 ];
-export let mockPages: Page[] = loadFromStorage<Page[]>(
+export const mockPages: Page[] = loadFromStorage<Page[]>(
   "mockPages",
   defaultPages,
 );
@@ -636,7 +629,7 @@ const defaultViews: CustomView[] = [
     created_at: new Date().toISOString(),
   },
 ];
-export let mockViews: CustomView[] = loadFromStorage<CustomView[]>(
+export const mockViews: CustomView[] = loadFromStorage<CustomView[]>(
   "mockViews",
   defaultViews,
 );
@@ -1115,7 +1108,7 @@ if (Array.isArray(rawCommunityPosts)) {
   });
 }
 
-export let mockCommunityPosts: CommunityPost[] = Array.from(
+export const mockCommunityPosts: CommunityPost[] = Array.from(
   communityPostMap.values(),
 );
 
@@ -1320,7 +1313,7 @@ if (Array.isArray(rawQuestions)) {
   });
 }
 
-export let mockQuestions: Question[] = Array.from(questionMap.values());
+export const mockQuestions: Question[] = Array.from(questionMap.values());
 
 if (isBrowser) {
   saveToStorage("mockQuestions", mockQuestions);

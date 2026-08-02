@@ -27,14 +27,6 @@ export const EditWorkspaceModal = ({ isOpen, onClose, workspace }: EditWorkspace
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
-  // Sync state when workspace prop changes
-  useEffect(() => {
-    if (isOpen) {
-      setName(workspace.name);
-      setLogo(workspace.logo || "🚀");
-    }
-  }, [isOpen, workspace]);
-
   // Close emoji picker on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -54,9 +46,11 @@ export const EditWorkspaceModal = ({ isOpen, onClose, workspace }: EditWorkspace
       toast.success("Workspace updated successfully.");
       onClose();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error("Failed to update workspace:", error);
-      toast.error(error?.message || "Failed to update workspace.");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update workspace.",
+      );
     },
   });
 

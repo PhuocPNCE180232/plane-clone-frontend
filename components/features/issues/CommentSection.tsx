@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { createComment, getComments } from "@/lib/services/comment.service";
 import type { Comment } from "@/types";
 import { mockUsers } from "@/mocks/db";
@@ -101,9 +102,11 @@ export const CommentSection = ({ issueId }: CommentSectionProps) => {
               <div key={comment.id} className="flex gap-4">
                 {/* Avatar */}
                 {user?.avatar ? (
-                  <img
+                  <Image
                     src={user.avatar}
                     alt={user.name}
+                    width={32}
+                    height={32}
                     className="h-8 w-8 shrink-0 rounded-full object-cover"
                   />
                 ) : (

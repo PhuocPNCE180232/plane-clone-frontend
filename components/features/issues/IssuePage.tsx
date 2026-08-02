@@ -1,81 +1,70 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { IssueHeader } from "./IssueHeader";
 import { IssueToolbar } from "./IssueToolbar";
 import { IssueTable } from "./IssueTable";
+import { IssueCalendar } from "./IssueCalendar";
+import { ProjectIssuesAnalytics } from "./ProjectIssuesAnalytics";
 import IssueBoard from "./board/IssueBoard";
+import type { IssueView } from "./types";
 
-import {
-  getIssues,
-  deleteIssue,
-} from "@/lib/services/issue.service";
-
-import type { Issue } from "@/types";
+import { useDeleteIssueMutation, useIssues } from "@/hooks/use-issues";
 
 interface IssuePageProps {
   projectId: string;
 }
 
 export const IssuePage = ({ projectId }: IssuePageProps) => {
-  const [issues, setIssues] = useState<Issue[]>([]);
-  const [view, setView] = useState<"list" | "board">("list");
+  const [view, setView] = useState<IssueView>("list");
+  const { data: issues = [], refetch } = useIssues(projectId);
+  const { mutate: deleteIssue } = useDeleteIssueMutation();
 
-  const loadIssues = async () => {
-    try {
-      const data = await getIssues(projectId);
-      setIssues(data);
-    } catch {
-      toast.error("Cannot load issues");
-    }
+  const reloadIssues = () => {
+    void refetch();
   };
 
-  useEffect(() => {
-    loadIssues();
-  }, [projectId]);
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteIssue(id);
-      toast.success("Issue deleted successfully!");
-      loadIssues();
-    } catch {
-      toast.error("Delete failed");
-    }
+  const handleDelete = (id: string) => {
+    deleteIssue(
+      { id },
+      {
+        onSuccess: () => toast.success("Issue deleted successfully!"),
+        onError: () => toast.error("Delete failed"),
+      },
+    );
   };
 
   return (
     <>
-      <div className="mb-4 flex items-center gap-1.5 text-sm text-gray-500">
-        <span>Plane Clone</span>
-        <ChevronRight className="h-3.5 w-3.5" />
-        <span className="font-medium text-gray-900">
-          Work Items
-        </span>
-      </div>
-
       <IssueHeader />
 
       <IssueToolbar
+        projectId={projectId}
         view={view}
         setView={setView}
-        onCreated={loadIssues}
+        onCreated={reloadIssues}
+        showProjectViews
       />
 
-      {view === "list" ? (
+      {view === "list" && (
         <IssueTable
           issues={issues}
           onDelete={handleDelete}
         />
-      ) : (
+      )}
+
+      {view === "board" && (
         <IssueBoard
           issues={issues}
-          reload={loadIssues}
+          reload={reloadIssues}
         />
       )}
+
+      {view === "calendar" && <IssueCalendar issues={issues} />}
+
+      {view === "analytics" && <ProjectIssuesAnalytics issues={issues} />}
     </>
   );
 };

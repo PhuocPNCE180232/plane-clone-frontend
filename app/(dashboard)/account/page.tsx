@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -17,21 +17,13 @@ export default function AccountSettingsPage() {
   const [email, setEmail] = useState(user?.email || "");
   const [isSaving, setIsSaving] = useState(false);
 
-  // Sync state if user changes externally
-  React.useEffect(() => {
-    if (user) {
-      if (!isEditingName) setName(user.name || "");
-      if (!isEditingEmail) setEmail(user.email || "");
-    }
-  }, [user, isEditingName, isEditingEmail]);
-
   const handleSaveName = async () => {
     try {
       setIsSaving(true);
       await updateUser({ name });
       toast.success("Tên đã được cập nhật thành công.");
       setIsEditingName(false);
-    } catch (error) {
+    } catch {
       toast.error("Cập nhật thất bại.");
     } finally {
       setIsSaving(false);
@@ -50,7 +42,7 @@ export default function AccountSettingsPage() {
       await updateUser({ email });
       toast.success("Email đã được cập nhật thành công.");
       setIsEditingEmail(false);
-    } catch (error) {
+    } catch {
       toast.error("Cập nhật thất bại.");
     } finally {
       setIsSaving(false);
@@ -64,6 +56,26 @@ export default function AccountSettingsPage() {
       </div>
     );
   }
+
+  const startEditingName = () => {
+    setName(user.name || "");
+    setIsEditingName(true);
+  };
+
+  const cancelEditingName = () => {
+    setName(user.name || "");
+    setIsEditingName(false);
+  };
+
+  const startEditingEmail = () => {
+    setEmail(user.email || "");
+    setIsEditingEmail(true);
+  };
+
+  const cancelEditingEmail = () => {
+    setEmail(user.email || "");
+    setIsEditingEmail(false);
+  };
 
   const avatarLetter = user.email?.charAt(0).toUpperCase() ?? "?";
 
@@ -122,7 +134,7 @@ export default function AccountSettingsPage() {
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Save
                       </Button>
-                      <Button variant="outline" onClick={() => setIsEditingName(false)} disabled={isSaving}>
+                      <Button variant="outline" onClick={cancelEditingName} disabled={isSaving}>
                         Cancel
                       </Button>
                     </div>
@@ -134,7 +146,7 @@ export default function AccountSettingsPage() {
                 )}
               </div>
               {!isEditingName && (
-                <Button variant="outline" size="sm" onClick={() => setIsEditingName(true)}>
+                <Button variant="outline" size="sm" onClick={startEditingName}>
                   Change
                 </Button>
               )}
@@ -158,7 +170,7 @@ export default function AccountSettingsPage() {
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Save
                       </Button>
-                      <Button variant="outline" onClick={() => setIsEditingEmail(false)} disabled={isSaving}>
+                      <Button variant="outline" onClick={cancelEditingEmail} disabled={isSaving}>
                         Cancel
                       </Button>
                     </div>
@@ -170,7 +182,7 @@ export default function AccountSettingsPage() {
                 )}
               </div>
               {!isEditingEmail && (
-                <Button variant="outline" size="sm" onClick={() => setIsEditingEmail(true)}>
+                <Button variant="outline" size="sm" onClick={startEditingEmail}>
                   Change
                 </Button>
               )}

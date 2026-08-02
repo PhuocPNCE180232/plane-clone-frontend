@@ -4,10 +4,10 @@ import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createCycleSchema } from "@/lib/validations/cycle";
 import { createCycle } from "@/lib/services/cycle.service";
-import { useAppStore } from "@/hooks/use-app-store";
 import { toast } from "@/hooks/use-toast";
 
 type Props = {
+	projectId: string;
 	onClose: () => void;
 };
 
@@ -53,14 +53,13 @@ const DateRangeToggle = () => {
 	);
 };
 
-export const CycleForm = ({ onClose }: Props) => {
+export const CycleForm = ({ projectId, onClose }: Props) => {
 	const queryClient = useQueryClient();
-	const { activeProjectId } = useAppStore();
 
 	const { mutate: handleCreateCycle, isPending } = useMutation({
 		mutationFn: createCycle,
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["cycles"] });
+		queryClient.invalidateQueries({ queryKey: ["cycles", projectId] });
 			toast.success("Cycle created successfully.");
 			onClose();
 		},
@@ -88,12 +87,11 @@ export const CycleForm = ({ onClose }: Props) => {
 		}
 
 		handleCreateCycle({
-			project_id: activeProjectId || "p1",
+			project_id: projectId,
 			name: res.data.title,
 			description: res.data.description || "",
 			start_date: res.data.startDate || "",
 			end_date: res.data.endDate || "",
-			progress: 0,
 		});
 	};
 

@@ -186,6 +186,7 @@ export const PageRow = ({ page, projectId, workspaceSlug }: PageRowProps) => {
       {/* Rename modal — rendered outside the row div to avoid z-index issues.
           Same pattern as MemberRow rendering its confirmation inside the component. */}
       <RenamePageModal
+        key={`${page.id}-${page.name}-${isRenameModalOpen}`}
         isOpen={isRenameModalOpen}
         onClose={() => setIsRenameModalOpen(false)}
         page={page}

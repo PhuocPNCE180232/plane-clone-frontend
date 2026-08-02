@@ -1,10 +1,5 @@
-import { Layout } from "@/components/shared/Layout";
-import { Dashboard } from "@/components/features/dashboard/Dashboard";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return (
-    <Layout>
-      <Dashboard />
-    </Layout>
-  );
+  redirect("/ojt-team-fe");
 }

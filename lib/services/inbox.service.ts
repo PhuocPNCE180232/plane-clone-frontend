@@ -16,18 +16,23 @@ import type { Notification } from "@/types";
 
 // ─── Service functions ─────────────────────────────────────────────────────
 
-/** Returns all notifications for the current workspace. */
-export const getNotifications = (): Promise<Notification[]> =>
-  get<Notification[]>("/inbox");
+/** Returns notifications for one workspace. */
+export const getNotifications = (workspaceId: string): Promise<Notification[]> =>
+  get<Notification[]>(`/inbox?workspace_id=${encodeURIComponent(workspaceId)}`);
 
 /** Marks a single notification as read and returns the updated resource. */
-export const markAsRead = (id: string): Promise<Notification> =>
-  patch<Notification>(`/inbox/${id}/read`);
+export const markAsRead = (id: string, workspaceId: string): Promise<Notification> =>
+  patch<Notification>(
+    `/inbox/${id}/read?workspace_id=${encodeURIComponent(workspaceId)}`,
+  );
 
 /** Marks all notifications as read. */
-export const markAllAsRead = (): Promise<{ success: boolean }> =>
-  patch<{ success: boolean }>("/inbox/read-all", {});
+export const markAllAsRead = (workspaceId: string): Promise<{ success: boolean }> =>
+  patch<{ success: boolean }>(
+    `/inbox/read-all?workspace_id=${encodeURIComponent(workspaceId)}`,
+    {},
+  );
 
 /** Deletes a notification by ID. Returns void (204 No Content). */
-export const deleteNotification = (id: string): Promise<void> =>
-  del<void>(`/inbox/${id}`);
+export const deleteNotification = (id: string, workspaceId: string): Promise<void> =>
+  del<void>(`/inbox/${id}?workspace_id=${encodeURIComponent(workspaceId)}`);

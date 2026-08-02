@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ChevronRight, FileText, Loader2, CircleDashed } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
-import { useWorkspaces } from "@/hooks/use-workspaces";
-import { useAppStore } from "@/hooks/use-app-store";
 import { usePage, useUpdatePageMutation } from "@/hooks/use-pages";
 import { toast } from "@/hooks/use-toast";
 
@@ -17,29 +15,20 @@ export const PageDetail = () => {
   const projectId    = (params?.projectId     as string) ?? "";
   const pageId       = (params?.pageId        as string) ?? "";
 
-  const { data: workspaces } = useWorkspaces();
-  const activeWorkspaceId    = useAppStore((state) => state.activeWorkspaceId);
-  const activeWorkspace      = workspaces?.find((w) => w.id === activeWorkspaceId);
-
   const { data: page, isLoading } = usePage(projectId || null, pageId || null);
 
-  // ── Content editing state ──────────────────────────────────────────────────
-  // All hooks must be called before early returns (React rules of hooks).
-  // Initialized empty; synced via useEffect once page data arrives or
-  // after a successful save invalidates the detail cache.
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState(page?.content ?? "");
+  const [previousPageContent, setPreviousPageContent] = useState(page?.content);
+  if (page?.content !== previousPageContent) {
+    setPreviousPageContent(page?.content);
+    setContent(page?.content ?? "");
+  }
 
   const { mutate: saveContent, isPending: isSaving } = useUpdatePageMutation();
-
-  // Sync local textarea value whenever the fetched page content changes.
-  // This covers both the initial load and cache refreshes after a save.
-  useEffect(() => {
-    if (page) setContent(page.content);
-  }, [page?.content]);
-
-  // True only when local content differs from the last-fetched value.
   const hasChanges = page ? content !== page.content : false;
 
+  // ── Content editing state ──────────────────────────────────────────────────
+  // Reset local content only when the fetched page content changes.
   // ── Loading — same Loader2 pattern as ProjectOverview ─────────────────────
   if (isLoading) {
     return (
@@ -70,9 +59,6 @@ export const PageDetail = () => {
     );
   }
 
-  // ── Save handler ───────────────────────────────────────────────────────────
-  // Uses mutate with inline callbacks — same pattern as PageRow.onDelete /
-  // RenamePageModal. Toast feedback stays in the component, not the hook.
   const onSave = () => {
     if (!hasChanges || !projectId || !pageId) return;
 
@@ -82,17 +68,20 @@ export const PageDetail = () => {
         onSuccess: () => {
           toast.success("Page saved.");
         },
-        onError: (e) => {
+        onError: (error) => {
           const message =
-            (e as { response?: { data?: { error?: string } } })
+            (error as { response?: { data?: { error?: string } } })
               ?.response?.data?.error ??
             "Failed to save page. Please try again.";
           toast.error(message);
         },
-      }
+      },
     );
   };
 
+  // ── Save handler ───────────────────────────────────────────────────────────
+  // Uses mutate with inline callbacks — same pattern as PageRow.onDelete /
+  // RenamePageModal. Toast feedback stays in the component, not the hook.
   let updatedLabel = "recently";
   try {
     const d = new Date(page.updated_at);
@@ -105,22 +94,7 @@ export const PageDetail = () => {
 
   return (
     <>
-      {/* Breadcrumb — unchanged from Phase 4 */}
       <div className="mb-6 flex items-center gap-1.5 text-sm text-gray-500">
-        <Link
-          href={`/${slug}`}
-          className="transition-colors hover:text-gray-900"
-        >
-          {activeWorkspace?.name || "Workspace"}
-        </Link>
-        <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
-        <Link
-          href={`/${slug}/projects`}
-          className="transition-colors hover:text-gray-900"
-        >
-          Projects
-        </Link>
-        <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
         <Link
           href={`/${slug}/projects/${projectId}/pages`}
           className="transition-colors hover:text-gray-900"

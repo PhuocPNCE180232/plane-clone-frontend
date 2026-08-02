@@ -5,6 +5,7 @@ import { useInbox, useMarkAllAsReadMutation } from "@/hooks/use-inbox";
 import { toast } from "@/hooks/use-toast";
 
 interface InboxHeaderProps {
+  workspaceId?: string;
   searchQuery: string;
   onSearchChange: (val: string) => void;
   activeTab: "all" | "unread";
@@ -12,6 +13,7 @@ interface InboxHeaderProps {
 }
 
 export const InboxHeader = ({
+  workspaceId,
   searchQuery,
   onSearchChange,
   activeTab,
@@ -19,7 +21,7 @@ export const InboxHeader = ({
 }: InboxHeaderProps) => {
   // React Query deduplicates this — InboxList already called useInbox(),
   // so this is a cache read, not a second network request.
-  const { data: notifications } = useInbox();
+  const { data: notifications } = useInbox(workspaceId);
   const { mutate: markAll, isPending } = useMarkAllAsReadMutation();
 
   // Disable "Mark all as read" when every notification is already read.
@@ -29,7 +31,9 @@ export const InboxHeader = ({
     notifications.every((n) => n.is_read);
 
   const onMarkAll = () => {
-    markAll(undefined, {
+    if (!workspaceId) return;
+
+    markAll(workspaceId, {
       onSuccess: () => toast.success("All notifications marked as read."),
       onError:   () => toast.error("Failed to mark all as read."),
     });

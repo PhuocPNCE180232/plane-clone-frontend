@@ -58,7 +58,7 @@ export function DeleteIssueDialog({
               Delete issue
               <br />
               <span className="font-semibold">
-                "{issueTitle}"
+                &quot;{issueTitle}&quot;
               </span>
               ?
             </p>

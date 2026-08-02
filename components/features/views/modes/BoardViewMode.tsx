@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Circle } from "lucide-react";
 
 import type { Issue } from "@/types";
@@ -17,12 +18,14 @@ interface BoardViewModeProps {
   issues: Issue[];
   projectMap: WorkspaceProjectMap;
   displayOptions: DisplayOptions;
+  workspaceSlug: string;
 }
 
 export const BoardViewMode = ({
   issues,
   projectMap,
   displayOptions,
+  workspaceSlug,
 }: BoardViewModeProps) => {
   if (issues.length === 0) {
     return <EmptyState />;
@@ -58,15 +61,16 @@ export const BoardViewMode = ({
                   const project = projectMap.get(getIssueProjectId(issue));
 
                   return (
-                    <article
+                    <Link
                       key={issue.id}
-                      className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md"
+                      href={`/${workspaceSlug}/projects/${getIssueProjectId(issue)}/issues/${issue.id}`}
+                      className="group block rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-[#3f76ff]/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f76ff]"
                     >
                       <p className="text-xs font-medium text-gray-400">
                         {issue.id}
                       </p>
 
-                      <h3 className="mt-2 break-words text-sm font-medium leading-5 text-gray-900">
+                      <h3 className="mt-2 break-words text-sm font-medium leading-5 text-gray-900 group-hover:text-[#3f76ff]">
                         {issue.title}
                       </h3>
 
@@ -85,7 +89,7 @@ export const BoardViewMode = ({
                           <p>{formatDate(getIssueDate(issue))}</p>
                         )}
                       </div>
-                    </article>
+                    </Link>
                   );
                 })}
               </div>

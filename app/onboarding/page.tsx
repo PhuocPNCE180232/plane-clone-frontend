@@ -4,32 +4,51 @@ import { useRouter } from "next/navigation";
 import { WorkspaceSetup } from "@/components/onboarding/workspace-setup";
 import { InviteMembers } from "@/components/onboarding/invite-members";
 import { CreateProject } from "@/components/onboarding/create-project";
+import type {
+  InviteMembersInput,
+  ProjectInput,
+  WorkspaceInput,
+} from "@/lib/validations/onboarding";
 import { useAuth } from "@/hooks/use-auth";
+import { useAppStore } from "@/hooks/use-app-store";
 import { createWorkspace } from "@/lib/services/workspace.service";
 import { createProject } from "@/lib/services/project.service";
 
 import { useQueryClient } from "@tanstack/react-query";
 
+type OnboardingInput = WorkspaceInput | InviteMembersInput | ProjectInput;
+
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [workspaceId, setWorkspaceId] = useState<string>("");
+  const [workspaceSlug, setWorkspaceSlug] = useState<string>("");
   const router = useRouter();
   const { user } = useAuth();
+  const setActiveWorkspace = useAppStore((state) => state.setWorkspace);
   const queryClient = useQueryClient();
 
-  const handleNext = async (data?: any) => {
+  const handleNext = async (data: OnboardingInput) => {
     try {
       if (step === 1) {
+        if (!("slug" in data)) return;
         const newWorkspace = await createWorkspace({
           name: data.name,
           slug: data.slug,
           ownerId: user?.id || "",
         });
         setWorkspaceId(newWorkspace.id);
+        setWorkspaceSlug(newWorkspace.slug);
+        setActiveWorkspace(newWorkspace.id);
         setStep(2);
       } else if (step === 2) {
         setStep(3);
       } else if (step === 3) {
+        if (!("identifier" in data)) return;
+        if (!workspaceId || !workspaceSlug) {
+          alert("Create a workspace before creating a project.");
+          setStep(1);
+          return;
+        }
         await createProject({
           name: data.name,
           identifier: data.identifier,
@@ -38,22 +57,25 @@ export default function OnboardingPage() {
         });
         queryClient.invalidateQueries({ queryKey: ["workspaces"] });
         queryClient.invalidateQueries({ queryKey: ["projects"] });
-        router.push("/");
+        router.replace(`/${workspaceSlug}`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Onboarding step failed", error);
-      alert(`Error in step ${step}: ${error?.message || "Unknown error"}`);
-      // Proceed gracefully if api fails during mock
-      if (step < 3) setStep(step + 1);
-      else router.push("/");
+      const message = error instanceof Error ? error.message : "Unknown error";
+      alert(`Error in step ${step}: ${message}`);
     }
   };
 
   const handleSkip = () => {
+    if (step === 1) {
+      router.replace("/");
+      return;
+    }
+
     if (step < 3) {
       setStep(step + 1);
     } else {
-      router.push("/");
+      router.replace(workspaceSlug ? `/${workspaceSlug}` : "/");
     }
   };
 

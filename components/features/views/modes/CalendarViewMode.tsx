@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CalendarDays } from "lucide-react";
 
 import type { Issue } from "@/types";
@@ -18,12 +19,14 @@ interface CalendarViewModeProps {
   issuesByDate: Record<string, Issue[]>;
   projectMap: WorkspaceProjectMap;
   displayOptions: DisplayOptions;
+  workspaceSlug: string;
 }
 
 export const CalendarViewMode = ({
   issuesByDate,
   projectMap,
   displayOptions,
+  workspaceSlug,
 }: CalendarViewModeProps) => {
   const dates = Object.keys(issuesByDate).sort();
 
@@ -53,11 +56,12 @@ export const CalendarViewMode = ({
                 const project = projectMap.get(getIssueProjectId(issue));
 
                 return (
-                  <div
+                  <Link
                     key={issue.id}
-                    className="rounded-lg border border-gray-100 bg-gray-50 p-2"
+                    href={`/${workspaceSlug}/projects/${getIssueProjectId(issue)}/issues/${issue.id}`}
+                    className="group block rounded-lg border border-gray-100 bg-gray-50 p-2 transition-colors hover:border-[#3f76ff]/40 hover:bg-blue-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f76ff]"
                   >
-                    <p className="text-sm font-medium text-gray-800">
+                    <p className="text-sm font-medium text-gray-800 group-hover:text-[#3f76ff]">
                       {issue.title}
                     </p>
 
@@ -72,7 +76,7 @@ export const CalendarViewMode = ({
                         <span>{issue.priority}</span>
                       )}
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>

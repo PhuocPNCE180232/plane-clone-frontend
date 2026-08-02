@@ -7,10 +7,15 @@ import { toast } from "@/hooks/use-toast";
 
 type CreatePostModalProps = {
   isOpen: boolean;
+  workspaceId?: string;
   onClose: () => void;
 };
 
-export const CreatePostModal = ({ isOpen, onClose }: CreatePostModalProps) => {
+export const CreatePostModal = ({
+  isOpen,
+  workspaceId,
+  onClose,
+}: CreatePostModalProps) => {
   const [content, setContent] = useState("");
   const { mutate: createPostMutate, isPending } = useCreatePostMutation();
 
@@ -20,10 +25,10 @@ export const CreatePostModal = ({ isOpen, onClose }: CreatePostModalProps) => {
   };
 
   const onSubmit = () => {
-    if (!content.trim()) return;
+    if (!content.trim() || !workspaceId) return;
 
     createPostMutate(
-      { content: content.trim() },
+      { content: content.trim(), workspace_id: workspaceId },
       {
         onSuccess: () => {
           toast.success("Post published successfully.");
@@ -84,7 +89,7 @@ export const CreatePostModal = ({ isOpen, onClose }: CreatePostModalProps) => {
           </button>
           <button
             onClick={onSubmit}
-            disabled={isPending || !content.trim()}
+            disabled={isPending || !content.trim() || !workspaceId}
             className="flex items-center justify-center min-w-[90px] rounded-md bg-[#3f76ff] px-4 py-2 text-sm font-medium text-white hover:bg-[#2d63e8] transition-colors disabled:opacity-50"
           >
             {isPending ? (

@@ -4,7 +4,11 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { CreatePostModal } from "./CreatePostModal";
 
-export const CommunityHeader = () => {
+type CommunityHeaderProps = {
+  workspaceId?: string;
+};
+
+export const CommunityHeader = ({ workspaceId }: CommunityHeaderProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
@@ -18,6 +22,7 @@ export const CommunityHeader = () => {
 
       <button
         onClick={() => setIsModalOpen(true)}
+        disabled={!workspaceId}
         className="
           flex items-center gap-1.5
           rounded-md bg-[#3f76ff]
@@ -33,6 +38,7 @@ export const CommunityHeader = () => {
 
       <CreatePostModal
         isOpen={isModalOpen}
+        workspaceId={workspaceId}
         onClose={() => setIsModalOpen(false)}
       />
     </div>

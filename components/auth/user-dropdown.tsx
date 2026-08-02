@@ -31,8 +31,10 @@ export function UserDropdown() {
     setIsLoggingOut(true);
     try {
       await logout();
-      router.push("/sign-in");
     } catch {
+      // Local auth state is cleared by useAuth.logout even when the request fails.
+    } finally {
+      router.replace("/sign-in");
       setIsLoggingOut(false);
     }
   };

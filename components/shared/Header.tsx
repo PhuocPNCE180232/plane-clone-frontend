@@ -13,6 +13,7 @@ export const Header = () => {
   const params = useParams();
   const router = useRouter();
   const currentSlug = (params?.workspaceSlug as string) ?? "";
+  const routeProjectId = params?.projectId as string | undefined;
   
   const { data: workspaces } = useWorkspaces();
   const { data: projects, isLoading: isProjectsLoading } = useProjects();
@@ -20,7 +21,10 @@ export const Header = () => {
   const { activeProjectId, setProject, activeWorkspaceId, setWorkspace } = useAppStore();
   
   const currentWorkspace = workspaces?.find((w) => w.slug === currentSlug) || workspaces?.[0];
-  const currentProject = projects?.find((p) => p.id === activeProjectId) || projects?.[0];
+  const currentProject =
+    projects?.find((project) => project.id === routeProjectId) ??
+    projects?.find((project) => project.id === activeProjectId) ??
+    projects?.[0];
 
   useEffect(() => {
     if (currentWorkspace && currentWorkspace.id !== activeWorkspaceId) {
@@ -91,7 +95,7 @@ export const Header = () => {
                     onClick={() => {
                       setProject(project.id);
                       setIsDropdownOpen(false);
-                      // Navigate to project page if needed, or just stay
+                      router.push(`/${currentSlug}/projects/${project.id}`);
                     }}
                     className="flex w-full items-center justify-between px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
                   >

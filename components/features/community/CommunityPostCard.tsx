@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Trash2, Heart, MessageCircle, Send, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { CommunityPost, CommunityComment } from "@/types";
@@ -53,7 +54,7 @@ export const CommunityPostCard = ({ post }: CommunityPostCardProps) => {
 
     if (!ok) return;
 
-    handleDeletePost(post.id, {
+    handleDeletePost({ postId: post.id, workspaceId: post.workspace_id }, {
       onSuccess: () => {
         toast.success("Post deleted successfully.");
       },
@@ -69,7 +70,7 @@ export const CommunityPostCard = ({ post }: CommunityPostCardProps) => {
 
   const onToggleLike = () => {
     handleToggleLike(
-      { postId: post.id },
+      { postId: post.id, workspaceId: post.workspace_id },
       {
         onError: () => {
           toast.error("Failed to update like. Please try again.");
@@ -84,7 +85,11 @@ export const CommunityPostCard = ({ post }: CommunityPostCardProps) => {
     if (!commentText.trim()) return;
 
     handleAddComment(
-      { postId: post.id, data: { content: commentText.trim() } },
+      {
+        postId: post.id,
+        workspaceId: post.workspace_id,
+        data: { content: commentText.trim() },
+      },
       {
         onSuccess: () => {
           setCommentText("");
@@ -113,7 +118,7 @@ export const CommunityPostCard = ({ post }: CommunityPostCardProps) => {
     if (!ok) return;
 
     handleDeleteComment(
-      { postId: post.id, commentId },
+      { postId: post.id, commentId, workspaceId: post.workspace_id },
       {
         onSuccess: () => {
           toast.success("Comment deleted.");
@@ -134,9 +139,11 @@ export const CommunityPostCard = ({ post }: CommunityPostCardProps) => {
       {/* ── Top row: Avatar + Author + Relative time + Delete Post button ─ */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img
+          <Image
             src={post.avatar}
             alt={post.author}
+            width={32}
+            height={32}
             className="h-8 w-8 rounded-full object-cover border border-gray-200 shrink-0"
           />
           <div>
@@ -300,9 +307,11 @@ const CommentRow = ({ comment, onDelete }: CommentRowProps) => {
   return (
     <div className="group/comment flex items-start justify-between gap-3 rounded-lg bg-gray-50 p-2.5 border border-gray-100">
       <div className="flex items-start gap-2.5 min-w-0">
-        <img
+        <Image
           src={comment.avatar}
           alt={comment.author}
+          width={24}
+          height={24}
           className="h-6 w-6 rounded-full object-cover border border-gray-200 shrink-0 mt-0.5"
         />
         <div className="min-w-0 flex-1">

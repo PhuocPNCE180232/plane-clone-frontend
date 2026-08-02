@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ForgotPasswordInput, forgotPasswordSchema } from "@/lib/validations/auth";
 import { Input } from "@/components/ui/input";
@@ -15,13 +14,13 @@ export default function ForgotPasswordPage() {
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<ForgotPasswordInput>({
     resolver: zodResolver(forgotPasswordSchema),
   });
 
-  const emailValue = watch("email");
+  const emailValue = useWatch({ control, name: "email" });
 
   const onSubmit = async (data: ForgotPasswordInput) => {
     // Simulate API delay

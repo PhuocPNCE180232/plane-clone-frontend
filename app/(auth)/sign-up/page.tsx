@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SignUpInput, signUpSchema } from "@/lib/validations/auth";
 import { Input } from "@/components/ui/input";
@@ -21,22 +21,26 @@ export default function SignUpPage() {
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
   });
 
-  const emailValue = watch("email");
-  const nameValue = watch("name");
+  const emailValue = useWatch({ control, name: "email" });
+  const nameValue = useWatch({ control, name: "name" });
 
   const onSubmit = async (data: SignUpInput) => {
     setErrorMsg("");
     try {
       await signup({ email: data.email, name: data.name, password: data.password });
       router.push("/onboarding");
-    } catch (err: any) {
-      setErrorMsg(err?.message || "Sign up failed. Please try again.");
+    } catch (error: unknown) {
+      setErrorMsg(
+        error instanceof Error
+          ? error.message
+          : "Sign up failed. Please try again.",
+      );
     }
   };
 

@@ -22,7 +22,7 @@
  * Clicking the backdrop also resolves with false.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { AlertTriangle } from "lucide-react";
 import { useConfirmStore, resolveConfirm } from "@/hooks/use-confirm";
@@ -32,8 +32,11 @@ export function ConfirmModal() {
   const { isOpen, config } = useConfirmStore();
 
   // ── SSR guard ────────────────────────────────────────────────────────────
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   // ── Auto-focus: move focus to Cancel button when the modal opens ──────────
   // Declared here (before the early return) so the ref is stable across

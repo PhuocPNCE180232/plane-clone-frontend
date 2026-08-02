@@ -1,44 +1,79 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import IssueBoard from "@/components/features/issues/board/IssueBoard";
 import { IssueHeader } from "@/components/features/issues/IssueHeader";
 import { IssueToolbar } from "@/components/features/issues/IssueToolbar";
 import { IssueTable } from "@/components/features/issues/IssueTable";
-import { mockIssues, mockCycles } from "@/mocks/db";
+import type { IssueView } from "@/components/features/issues/types";
+import { getCycleById } from "@/lib/services/cycle.service";
+import { useDeleteIssueMutation, useIssues } from "@/hooks/use-issues";
+import { toast } from "sonner";
 
 interface CycleWorkItemProps {
   cycleId?: string;
 }
 
+const getRouteParam = (value: string | string[] | undefined) =>
+  Array.isArray(value) ? value[0] ?? "" : value ?? "";
+
 export const CycleWorkItem = ({ cycleId }: CycleWorkItemProps) => {
-  const [view, setView] = useState<"list" | "board">("list");
-  const [reloadKey, setReloadKey] = useState(0);
+  const [view, setView] = useState<IssueView>("list");
   const params = useParams();
 
-  const effectiveCycleId = cycleId ?? params?.cycleId ?? "";
-  const selectedCycle = mockCycles.find((item) => item.id === effectiveCycleId);
-  const issues = mockIssues.filter((issue) => {
-    void reloadKey;
-    return issue.cycle_id === effectiveCycleId;
+  const effectiveCycleId = cycleId ?? getRouteParam(params?.cycleId);
+  const { data: selectedCycle } = useQuery({
+    queryKey: ["cycles", "detail", effectiveCycleId],
+    queryFn: () => getCycleById(effectiveCycleId),
+    enabled: Boolean(effectiveCycleId),
   });
+  const workspaceSlug = getRouteParam(params?.workspaceSlug);
+  const projectId =
+    getRouteParam(params?.projectId) || selectedCycle?.project_id || "";
+  const cyclesHref =
+    workspaceSlug && projectId
+      ? `/${workspaceSlug}/projects/${projectId}/cycles`
+      : "#";
+  const { data: projectIssues = [], refetch: refetchIssues } = useIssues(projectId);
+  const { mutate: deleteIssue } = useDeleteIssueMutation();
+  const issues = projectIssues.filter(
+    (issue) => issue.cycle_id === effectiveCycleId,
+  );
 
-  const reloadIssues = () => setReloadKey((current) => current + 1);
+  const reloadIssues = () => {
+    void refetchIssues();
+  };
+
+  const handleDelete = (id: string) => {
+    deleteIssue(
+      { id },
+      {
+        onSuccess: () => {
+          toast.success("Issue deleted successfully!");
+          reloadIssues();
+        },
+        onError: () => toast.error("Delete failed"),
+      },
+    );
+  };
 
   return (
     <>
       <div className="mb-4 flex items-center gap-1.5 text-sm text-gray-500">
-        <span className="cursor-pointer transition-colors hover:text-gray-900">
-          Plane Clone
-        </span>
-        <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
-        <span className="cursor-pointer transition-colors hover:text-gray-900">
+        <Link
+          href={cyclesHref}
+          className="transition-colors hover:text-gray-900"
+        >
           Cycles
-        </span>
+        </Link>
         <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
-        <span className="font-medium text-gray-900">All Work Items</span>
+        <span className="max-w-[200px] truncate font-medium text-gray-900">
+          {selectedCycle?.name ?? effectiveCycleId}
+        </span>
       </div>
 
       <IssueHeader />
@@ -61,10 +96,17 @@ export const CycleWorkItem = ({ cycleId }: CycleWorkItemProps) => {
         </p>
       </div>
 
-      <IssueToolbar view={view} setView={setView} onCreated={reloadIssues} />
+      {selectedCycle && (
+        <IssueToolbar
+          projectId={selectedCycle.project_id}
+          view={view}
+          setView={setView}
+          onCreated={reloadIssues}
+        />
+      )}
 
       {view === "list" ? (
-        <IssueTable issues={issues} />
+        <IssueTable issues={issues} onDelete={handleDelete} />
       ) : (
         <IssueBoard issues={issues} reload={reloadIssues} />
       )}
