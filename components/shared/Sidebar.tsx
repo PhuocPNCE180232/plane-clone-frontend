@@ -3,18 +3,19 @@
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import {
-  Home,
-  FileEdit,
-  UserCircle,
-  Pin,
-  FolderOpen,
-  CircleDot,
+  BarChart2,
   Boxes,
-  RefreshCw,
+  CircleDot,
+  FileEdit,
+  FolderOpen,
+  Home,
+  Layers,
   MoreHorizontal,
   ChevronLeft,
   Settings,
-  BarChart2,
+  Pin,
+  RefreshCw,
+  UserCircle,
 } from "lucide-react";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 
@@ -41,22 +42,24 @@ export const Sidebar = () => {
   // ── Nav definitions ──────────────────────────────────────────────────────
 
   const menus: NavItem[] = [
-    { icon: <Home      className="h-4 w-4" />, title: "Home",      href: `/${slug}`        },
-    { icon: <FileEdit  className="h-4 w-4" />, title: "Drafts",    href: `/${slug}/drafts` },
-    { icon: <UserCircle className="h-4 w-4" />,title: "Your Work", href: `/${slug}/your-work` },
-    { icon: <Pin       className="h-4 w-4" />, title: "Stickies",  href: `/${slug}/stickies`  },
+    { icon: <Home       className="h-4 w-4" />, title: "Home",      href: `/${slug}`        },
+    { icon: <FileEdit   className="h-4 w-4" />, title: "Drafts",    href: `/${slug}/drafts` },
+    { icon: <UserCircle className="h-4 w-4" />, title: "Your Work", href: `/${slug}/your-work` },
+    { icon: <Pin        className="h-4 w-4" />, title: "Stickies",  href: `/${slug}/stickies`  },
   ];
 
+  // Giữ menu Workspace tổng quan
   const workspace: NavItem[] = [
     { icon: <FolderOpen className="h-4 w-4" />, title: "Projects",   href: `/${slug}/projects` },
     { icon: <BarChart2  className="h-4 w-4" />, title: "Analytics",  href: `/${slug}/analytics` },
   ];
 
+  // Gộp đầy đủ các tính năng của Trâm, Đức, Điền vào menu chi tiết Project
   const projectMenus: NavItem[] = [
     { icon: <CircleDot  className="h-4 w-4" />, title: "Work Items", href: `/${slug}/projects/${projectId}/issues`   },
     { icon: <RefreshCw  className="h-4 w-4" />, title: "Cycles",     href: `/${slug}/projects/${projectId}/cycles`   },
     { icon: <Boxes      className="h-4 w-4" />, title: "Modules",    href: `/${slug}/projects/${projectId}/modules`  },
-    { icon: <FileEdit   className="h-4 w-4" />, title: "Views",      href: `/${slug}/projects/${projectId}/views`    },
+    { icon: <Layers     className="h-4 w-4" />, title: "Views",      href: `/${slug}/projects/${projectId}/views`    },
     { icon: <Settings   className="h-4 w-4" />, title: "Settings",   href: `/${slug}/projects/${projectId}/settings` },
   ];
 
