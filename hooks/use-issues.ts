@@ -72,22 +72,23 @@ export const useCreateIssueMutation = () => {
 
     onMutate: async (newIssue) => {
       await queryClient.cancelQueries({
-        queryKey: issueKeys.list(newIssue.projectId),
+        queryKey: issueKeys.list(newIssue.project_id),
       });
 
       const previousIssues = queryClient.getQueryData<Issue[]>(
-        issueKeys.list(newIssue.projectId),
+        issueKeys.list(newIssue.project_id),
       );
 
       const optimisticIssue: Issue = {
         ...newIssue,
+        module_id: newIssue.module_id || null,
+        cycle_id: newIssue.cycle_id || null,
         id: `temp-${Date.now()}`,
         created_at: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
       };
 
       queryClient.setQueryData<Issue[]>(
-        issueKeys.list(newIssue.projectId),
+        issueKeys.list(newIssue.project_id),
         (oldIssues = []) => [optimisticIssue, ...oldIssues],
       );
 
@@ -97,7 +98,7 @@ export const useCreateIssueMutation = () => {
     onError: (_error, newIssue, context) => {
       if (context?.previousIssues) {
         queryClient.setQueryData(
-          issueKeys.list(newIssue.projectId),
+          issueKeys.list(newIssue.project_id),
           context.previousIssues,
         );
       }
@@ -105,7 +106,7 @@ export const useCreateIssueMutation = () => {
 
     onSuccess: (createdIssue, _newIssue, context) => {
       queryClient.setQueryData<Issue[]>(
-        issueKeys.list(createdIssue.projectId),
+        issueKeys.list(createdIssue.project_id),
         (oldIssues = []) =>
           oldIssues.map((issue) =>
             issue.id === context.optimisticIssue.id ? createdIssue : issue,
@@ -117,7 +118,7 @@ export const useCreateIssueMutation = () => {
 
     onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({
-        queryKey: issueKeys.list(variables.projectId),
+        queryKey: issueKeys.list(variables.project_id),
       });
     },
   });
@@ -148,14 +149,12 @@ export const useUpdateIssueMutation = () => {
           oldIssues.map((issue) => {
             if (issue.id !== id) return issue;
 
-            const nextIssue: Issue = {
+            return {
               ...issue,
               ...data,
               state: (data.state as Issue["state"]) ?? issue.state,
               priority: (data.priority as Issue["priority"]) ?? issue.priority,
             };
-
-            return nextIssue;
           }),
       );
 

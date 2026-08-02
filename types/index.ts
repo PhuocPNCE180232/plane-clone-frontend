@@ -48,3 +48,78 @@ export interface Comment {
   content: string;
   created_at: string;
 }
+
+export interface Member {
+  id: string;
+  workspace_id: string;
+  email: string;
+  /** "owner" | "admin" | "member" | "guest" — kept as string to match mocks/db.ts */
+  role: string;
+  joined_at: string;
+}
+
+export interface Page {
+  id: string;
+  project_id: string;
+  name: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Notification {
+  id: string;
+  workspace_id: string;
+  title: string;
+  description: string;
+  type:
+    | "issue"
+    | "page"
+    | "member"
+    | "comment"
+    | "cycle"
+    | "module"
+    | "project";
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface CommunityComment {
+  id: string;
+  author: string;
+  avatar: string;
+  content: string;
+  created_at: string;
+}
+
+export interface CommunityPost {
+  id: string;
+  workspace_id: string;
+  author: string;
+  avatar: string;
+  content: string;
+  created_at: string;
+  likes: number;
+  liked: boolean;
+  comments: CommunityComment[];
+}
+
+export interface QuestionAnswer {
+  id: string;
+  question_id: string;
+  author: string;
+  avatar: string;
+  content: string;
+  created_at: string;
+}
+
+export interface Question {
+  id: string;
+  workspace_id: string;
+  title: string;
+  description: string;
+  author: string;
+  avatar: string;
+  created_at: string;
+  answers: QuestionAnswer[];
+}

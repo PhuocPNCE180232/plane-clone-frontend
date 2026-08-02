@@ -16,6 +16,11 @@ import {
   Pin,
   RefreshCw,
   UserCircle,
+  Users,
+  FileText,
+  Bell,
+  MessageSquare,
+  CircleHelp,
 } from "lucide-react";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 
@@ -34,40 +39,40 @@ export const Sidebar = () => {
   const params    = useParams();
 
   // Read the real workspaceSlug from URL params.
-  // Falls back to the literal "workspaceSlug" so existing routes continue
-  // to work while the app has no real auth/workspace selection.
   const slug = (params?.workspaceSlug as string) ?? "workspaceSlug";
   const projectId = params?.projectId as string;
 
   // ── Nav definitions ──────────────────────────────────────────────────────
 
+  // 1. Menu cá nhân (Luôn hiển thị)
   const menus: NavItem[] = [
     { icon: <Home       className="h-4 w-4" />, title: "Home",      href: `/${slug}`        },
+    { icon: <Bell       className="h-4 w-4" />, title: "Inbox",     href: `/${slug}/inbox`  },
     { icon: <FileEdit   className="h-4 w-4" />, title: "Drafts",    href: `/${slug}/drafts` },
     { icon: <UserCircle className="h-4 w-4" />, title: "Your Work", href: `/${slug}/your-work` },
     { icon: <Pin        className="h-4 w-4" />, title: "Stickies",  href: `/${slug}/stickies`  },
   ];
 
-  // Giữ menu Workspace tổng quan
+  // 2. Menu Workspace (Chỉ hiện ở màn ngoài)
   const workspace: NavItem[] = [
-    { icon: <FolderOpen className="h-4 w-4" />, title: "Projects",   href: `/${slug}/projects` },
-    { icon: <BarChart2  className="h-4 w-4" />, title: "Analytics",  href: `/${slug}/analytics` },
+    { icon: <FolderOpen    className="h-4 w-4" />, title: "Projects",   href: `/${slug}/projects` },
+    { icon: <Users         className="h-4 w-4" />, title: "Members",    href: `/${slug}/members`  },
+    { icon: <BarChart2     className="h-4 w-4" />, title: "Analytics",  href: `/${slug}/analytics` },
+    { icon: <MessageSquare className="h-4 w-4" />, title: "Community",  href: `/${slug}/community` },
+    { icon: <CircleHelp    className="h-4 w-4" />, title: "Question",   href: `/${slug}/questions` },
   ];
 
-  // Gộp đầy đủ các tính năng của Trâm, Đức, Điền vào menu chi tiết Project
+  // 3. Menu Project (Chỉ hiện khi bấm vào 1 dự án cụ thể)
   const projectMenus: NavItem[] = [
     { icon: <CircleDot  className="h-4 w-4" />, title: "Work Items", href: `/${slug}/projects/${projectId}/issues`   },
     { icon: <RefreshCw  className="h-4 w-4" />, title: "Cycles",     href: `/${slug}/projects/${projectId}/cycles`   },
     { icon: <Boxes      className="h-4 w-4" />, title: "Modules",    href: `/${slug}/projects/${projectId}/modules`  },
     { icon: <Layers     className="h-4 w-4" />, title: "Views",      href: `/${slug}/projects/${projectId}/views`    },
+    { icon: <FileText   className="h-4 w-4" />, title: "Pages",      href: `/${slug}/projects/${projectId}/pages`    },
     { icon: <Settings   className="h-4 w-4" />, title: "Settings",   href: `/${slug}/projects/${projectId}/settings` },
   ];
 
   // ── Active check ─────────────────────────────────────────────────────────
-  // A link is active when the pathname exactly matches its href, OR the
-  // pathname starts with href + "/" (covers nested sub-routes).
-  // The home route is exact-only to avoid it lighting up on every page.
-
   const isActive = (href: string): boolean => {
     const homeHref = `/${slug}`;
     if (href === homeHref) return pathname === homeHref || pathname === "/";
@@ -75,7 +80,6 @@ export const Sidebar = () => {
   };
 
   // ── Link class helper ─────────────────────────────────────────────────────
-
   const linkClass = (href: string) =>
     [
       "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors",
