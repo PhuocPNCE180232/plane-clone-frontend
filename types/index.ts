@@ -29,6 +29,7 @@ export interface Project {
 export interface Issue {
   id: string;
   project_id: string;
+
   title: string;
   description: string;
 
@@ -49,6 +50,12 @@ export interface Issue {
   assignee_id: string | null;
   module_id: string | null;
   cycle_id: string | null;
+
+  labels?: string[];
+
+  start_date?: string | null;
+
+  due_date?: string | null;
 
   created_at: string;
 }

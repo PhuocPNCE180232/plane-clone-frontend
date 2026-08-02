@@ -1,31 +1,82 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useState } from "react";
-import { createIssue } from "@/lib/services/issue.service";
+import { updateIssue } from "@/lib/services/issue.service";
+import { getProjects } from "@/lib/services/project.service";
+import { getModules } from "@/lib/services/module.service";
+import { getCycles } from "@/lib/services/cycle.service";
+import { userService } from "@/lib/services/user.service";
+import type { Issue } from "@/types";
 
-interface IssueFormProps {
+interface EditIssueFormProps {
+  issue: Issue;
   onClose: () => void;
-  onCreated: () => void;
+  onUpdated: () => void;
 }
 
-export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState("Low");
-  const [state, setState] = useState("Todo");
+export const EditIssueForm = ({
+  issue,
+  onClose,
+  onUpdated,
+}: EditIssueFormProps) => {
+  const [title, setTitle] = useState(issue.title);
+  const [description, setDescription] = useState(issue.description);
+  const [priority, setPriority] = useState(issue.priority);
+  const [state, setState] = useState(issue.state);
 
-  const [projectId, setProjectId] = useState("p1");
-  const [assigneeId, setAssigneeId] = useState("");
-  const [moduleId, setModuleId] = useState("");
-  const [cycleId, setCycleId] = useState("");
-  const [labels, setLabels] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [projectId, setProjectId] = useState(issue.project_id);
+  const [assigneeId, setAssigneeId] = useState(issue.assignee_id ?? "");
+  const [moduleId, setModuleId] = useState(issue.module_id ?? "");
+  const [cycleId, setCycleId] = useState(issue.cycle_id ?? "");
+  const [labels, setLabels] = useState(
+    issue.labels?.join(", ") ?? ""
+  );
+  const [startDate, setStartDate] = useState(
+    issue.start_date ?? ""
+  );
+  const [dueDate, setDueDate] = useState(
+    issue.due_date ?? ""
+  );
 
-  const handleCreate = async () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // States chứa dữ liệu danh sách động
+  const [projects, setProjects] = useState<any[]>([]);
+  const [modules, setModules] = useState<any[]>([]);
+  const [cycles, setCycles] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [projectData, moduleData, cycleData, userData] =
+          await Promise.all([
+            getProjects(),
+            getModules(),
+            getCycles(),
+            userService.getUsers(),
+          ]);
+
+        setProjects(projectData);
+        setModules(moduleData);
+        setCycles(cycleData);
+        setUsers(userData);
+      } catch (error) {
+        console.error("Failed to fetch options:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handleUpdate = async () => {
+    if (isSubmitting) return;
+
     try {
-      await createIssue({
+      setIsSubmitting(true);
+
+      await updateIssue(issue.id, {
         project_id: projectId,
         title,
         description,
@@ -42,13 +93,15 @@ export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
         due_date: dueDate || null,
       });
 
-      toast.success("Issue created successfully!");
+      toast.success("Issue updated successfully!");
 
-      onCreated();
+      onUpdated();
       onClose();
     } catch (error) {
-      toast.error("Failed to create issue!");
+      toast.error("Failed to update issue!");
       console.error(error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -56,7 +109,7 @@ export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
     <div className="fixed inset-0 flex items-center justify-center bg-black/40">
       <div className="w-[500px] max-h-[90vh] overflow-y-auto rounded-lg bg-white p-6 shadow-lg">
         <h2 className="mb-5 text-xl font-semibold">
-          Create Issue
+          Edit Issue
         </h2>
 
         <div className="space-y-4">
@@ -70,9 +123,11 @@ export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
               onChange={(e) => setProjectId(e.target.value)}
               className="w-full rounded border p-2"
             >
-              <option value="p1">Plane Clone</option>
-              <option value="p2">Backend API</option>
-              <option value="p3">Mobile App</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -146,13 +201,11 @@ export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
               className="w-full rounded border p-2"
             >
               <option value="">None</option>
-              <option value="u1">Phước</option>
-              <option value="u2">Điền</option>
-              <option value="u3">Danh</option>
-              <option value="u4">Nhân</option>
-              <option value="u5">Nghĩa</option>
-              <option value="u6">Trâm</option>
-              <option value="u7">Đức</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -167,9 +220,11 @@ export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
               className="w-full rounded border p-2"
             >
               <option value="">None</option>
-              <option value="m1">Auth</option>
-              <option value="m2">Core Features</option>
-              <option value="m3">UI Components</option>
+              {modules.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -184,8 +239,11 @@ export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
               className="w-full rounded border p-2"
             >
               <option value="">None</option>
-              <option value="c1">Cycle 1</option>
-              <option value="c2">Cycle 2</option>
+              {cycles.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -232,18 +290,19 @@ export const IssueForm = ({ onClose, onCreated }: IssueFormProps) => {
             <button
               type="button"
               onClick={onClose}
-              className="rounded border px-4 py-2"
+              disabled={isSubmitting}
+              className="rounded border px-4 py-2 disabled:opacity-50"
             >
               Cancel
             </button>
 
             <button
               type="button"
-              onClick={handleCreate}
-              disabled={!title.trim()}
+              onClick={handleUpdate}
+              disabled={!title.trim() || isSubmitting}
               className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
             >
-              Create
+              {isSubmitting ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </div>
