@@ -3,15 +3,17 @@
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import {
-  Home,
-  FileEdit,
-  UserCircle,
-  Pin,
-  FolderOpen,
-  CircleDot,
+  BarChart2,
   Boxes,
-  RefreshCw,
+  CircleDot,
+  FileEdit,
+  FolderOpen,
+  Home,
+  Layers,
   MoreHorizontal,
+  Pin,
+  RefreshCw,
+  UserCircle,
 } from "lucide-react";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 
@@ -44,11 +46,13 @@ export const Sidebar = () => {
   ];
 
   const workspace: NavItem[] = [
-    { icon: <FolderOpen className="h-4 w-4" />, title: "Projects",   href: `/${slug}/projects` },
-    { icon: <CircleDot  className="h-4 w-4" />, title: "Work Items", href: `/${slug}/issues`   },
-    { icon: <Boxes      className="h-4 w-4" />, title: "Modules",    href: `/${slug}/modules`  },
-    { icon: <RefreshCw  className="h-4 w-4" />, title: "Cycles",     href: `/${slug}/cycles`   },
-  ];
+  { icon: <FolderOpen className="h-4 w-4" />, title: "Projects", href: `/${slug}/projects` },
+  { icon: <CircleDot className="h-4 w-4" />, title: "Work Items", href: `/${slug}/issues` },
+  { icon: <Layers className="h-4 w-4" />, title: "Views", href: `/${slug}/views` },
+  { icon: <BarChart2 className="h-4 w-4" />, title: "Analytics", href: `/${slug}/analytics` },
+  { icon: <Boxes className="h-4 w-4" />, title: "Modules", href: `/${slug}/modules` },
+  { icon: <RefreshCw className="h-4 w-4" />, title: "Cycles", href: `/${slug}/cycles` },
+];
 
   // ── Active check ─────────────────────────────────────────────────────────
   // A link is active when the pathname exactly matches its href, OR the
